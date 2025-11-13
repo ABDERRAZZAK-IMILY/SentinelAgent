@@ -1,10 +1,10 @@
-# 🧠 SentinelAgent – Cyber Attack Detector (Go + Spring Boot + Spring AI + Angular)
+#  SentinelAgent – Cyber Attack Detector (Go + Spring Boot + Spring AI + Angular)
 
 This document describes the architecture and main components of the **SentinelAgent** system — a distributed cyber-attack detection platform composed of a Go-based agent, Spring Boot backend, Spring AI engine, and Angular dashboard.
 
 ---
 
-## 🧩 System Architecture Overview
+##  System Architecture Overview
 
 ```text
 +------------------------------------------------------+
