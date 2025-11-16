@@ -17,6 +17,13 @@ import (
 
 var writer *kafka.Writer
 
+type ProcessInfo struct {
+	PID       int32   `json:"pid"`
+	Name      string  `json:"name"`
+	CPU       float64 `json:"cpu"`
+	Username  string  `json:"username"`
+}
+
 func main() {
 	f, err := os.OpenFile("sentinelagent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
