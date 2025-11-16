@@ -29,13 +29,12 @@ SentinelAgent is an advanced cybersecurity platform that leverages artificial in
 ```bash
 git clone https://github.com/ABDERRAZZAK-IMILY/SentinelAgent.git
 cd SentinelAgent
-pip install -r requirements.txt
 ```
 
 ## Quick Start
 
 ```bash
-python sentinelagent.py --config config.yml
+go run test.go
 ```
 
 ## Configuration
@@ -44,9 +43,8 @@ Edit `config.yml` to customize detection parameters and set up your environment.
 
 ## Requirements
 
-- Python 3.8+
-- TensorFlow/PyTorch
-- Network monitoring capabilities
+- java 17
+- golang
 
 ## License
 
