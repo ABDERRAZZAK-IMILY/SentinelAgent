@@ -18,10 +18,10 @@ import (
 var writer *kafka.Writer
 
 type ProcessInfo struct {
-	PID       int32   `json:"pid"`
-	Name      string  `json:"name"`
-	CPU       float64 `json:"cpu"`
-	Username  string  `json:"username"`
+	PID      int32   `json:"pid"`
+	Name     string  `json:"name"`
+	CPU      float64 `json:"cpu"`
+	Username string  `json:"username"`
 }
 
 func main() {
@@ -88,25 +88,55 @@ func createTopic(brokerAddr, topic string) error {
 func sendSystemMetrics() {
 	data := make(map[string]interface{})
 
-	// CPU
 	cpuPercents, err := cpu.Percent(0, false)
 	if err == nil && len(cpuPercents) > 0 {
 		data["cpu"] = cpuPercents[0]
 	}
 
-	// RAM
 	vmStat, err := mem.VirtualMemory()
 	if err == nil {
 		data["ram_used_percent"] = vmStat.UsedPercent
 		data["ram_total_mb"] = vmStat.Total / 1024 / 1024
 	}
 
-	// Disk (C:)
 	diskStat, err := disk.Usage("C:")
 	if err == nil {
 		data["disk_used_percent"] = diskStat.UsedPercent
 		data["disk_total_gb"] = diskStat.Total / 1024 / 1024 / 1024
 	}
+
+	procList := []ProcessInfo{}
+
+	processes, err := process.Processes()
+	if err != nil {
+		log.Println(" Error getting processes:", err)
+	} else {
+		for _, p := range processes {
+			name, errName := p.Name()
+			if errName != nil {
+				name = "N/A" // N/A = Not Available
+			}
+
+			cpuPercent, errCPU := p.CPUPercent()
+			if errCPU != nil {
+				cpuPercent = 0.0
+			}
+
+			username, errUser := p.Username()
+			if errUser != nil {
+				username = "N/A"
+			}
+
+			procList = append(procList, ProcessInfo{
+				PID:      p.Pid,
+				Name:     name,
+				CPU:      cpuPercent,
+				Username: username,
+			})
+		}
+	}
+
+	data["processes"] = procList
 
 	msgBytes, err := json.Marshal(data)
 	if err != nil {
@@ -124,5 +154,5 @@ func sendSystemMetrics() {
 		return
 	}
 
-	log.Println(" Sent data to Kafka:", string(msgBytes))
+	log.Println(" Sent data to Kafka (with processes):", string(msgBytes))
 }
