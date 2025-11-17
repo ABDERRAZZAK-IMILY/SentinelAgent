@@ -25,6 +25,15 @@ type ProcessInfo struct {
 	Username string  `json:"username"`
 }
 
+type NetworkConnectionInfo struct {
+	PID          int32  `json:"pid"`
+	LocalAddress string `json:"local_address"`
+	LocalPort    uint32 `json:"local_port"`
+	RemoteAddress string `json:"remote_address"`
+	RemotePort   uint32 `json:"remote_port"`
+	Status       string `json:"status"`
+}
+
 func main() {
 	f, err := os.OpenFile("sentinelagent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
