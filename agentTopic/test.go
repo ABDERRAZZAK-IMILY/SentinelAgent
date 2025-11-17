@@ -117,6 +117,9 @@ func sendSystemMetrics() {
 
 	procList := []ProcessInfo{}
 
+
+	
+
 	processes, err := process.Processes()
 	if err != nil {
 		log.Println(" Error getting processes:", err)
@@ -147,6 +150,31 @@ func sendSystemMetrics() {
 	}
 
 	data["processes"] = procList
+
+
+		netList := []NetworkConnectionInfo{}
+
+
+	connections, err := net.Connections("tcp") 
+	if err != nil {
+		log.Println(" Error getting network connections:", err)
+	} else {
+		for _, c := range connections {
+			if c.Raddr.IP != "" {
+				netList = append(netList, NetworkConnectionInfo{
+					PID:          c.Pid,
+					LocalAddress: c.Laddr.IP,
+					LocalPort:    c.Laddr.Port,
+					RemoteAddress: c.Raddr.IP,
+					RemotePort:   c.Raddr.Port,
+					Status:       c.Status,
+				})
+			}
+		}
+	}
+	data["network_connections"] = netList
+
+
 
 	msgBytes, err := json.Marshal(data)
 	if err != nil {
