@@ -155,7 +155,7 @@ func sendSystemMetrics() {
 		netList := []NetworkConnectionInfo{}
 
 
-	connections, err := net.Connections("tcp") 
+	connections, err := net.Connections("tcp")
 	if err != nil {
 		log.Println(" Error getting network connections:", err)
 	} else {
