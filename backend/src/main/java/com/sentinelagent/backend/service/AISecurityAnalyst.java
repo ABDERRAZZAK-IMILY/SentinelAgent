@@ -31,6 +31,7 @@ public class AISecurityAnalyst {
         String networkContext = enrichNetworkData(report.getNetworkConnections());
 
         String ragContext = ragService.findMitigationStrategy("High resource usage or suspicious network connection");
+        if (ragContext == null) ragContext = "No specific MITRE data found.";
 
         String promptText = """
                 You are an advanced Cybersecurity AI Agent powered by DeepSeek.
@@ -52,17 +53,17 @@ public class AISecurityAnalyst {
                 1. Combine the live metrics with the provided Network Intelligence.
                 2. If a malicious IP is detected in 'Network Intelligence', prioritize it as a threat.
                 3. Use the MITRE context to suggest specific mitigation steps.
-                4. Output a concise JSON alert with fields: {risk_level, threat_type, description, recommendation}.
+                4. Output a concise JSON alert containing the following keys: risk_level, threat_type, description, recommendation.
                 """;
 
         PromptTemplate template = new PromptTemplate(promptText);
 
         Map<String, Object> params = Map.of(
-                "rag_context", ragContext != null ? ragContext : "No specific data found",
+                "rag_context", ragContext,
                 "network_context", networkContext,
                 "cpu", report.getCpuUsage(),
                 "ram", report.getRamUsedPercent(),
-                "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes data"
+                "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes"
         );
 
         Prompt prompt = template.create(params);
