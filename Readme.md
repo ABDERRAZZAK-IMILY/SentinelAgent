@@ -1,7 +1,5 @@
 # SentinelAgent
-
-AI-Powered Cyber Attack Detection Platform
-
+SOC-grade system powerd by AI
 ## Overview
 
 SentinelAgent is an advanced cybersecurity platform that leverages artificial intelligence to detect and respond to cyber attacks in real-time. By analyzing network traffic, system behaviors, and threat patterns, SentinelAgent provides proactive protection against modern cyber threats.
