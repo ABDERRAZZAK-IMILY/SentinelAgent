@@ -2,7 +2,7 @@ package com.sentinelagent.backend.service;
 
 import com.sentinelagent.backend.model.MetricReport;
 import com.sentinelagent.backend.model.NetworkConnectionModel;
-import org.springframework.ai.chat.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.stereotype.Service;
@@ -14,14 +14,14 @@ import java.util.stream.Collectors;
 @Service
 public class AISecurityAnalyst {
 
-    private final ChatClient chatClient;
+    private final ChatModel chatModel;
     private final RagSecurityService ragService;
     private final NetworkIntelligenceService networkIntel;
 
-    public AISecurityAnalyst(ChatClient chatClient,
+    public AISecurityAnalyst(ChatModel chatModel,
                              RagSecurityService ragService,
                              NetworkIntelligenceService networkIntel) {
-        this.chatClient = chatClient;
+        this.chatModel = chatModel;
         this.ragService = ragService;
         this.networkIntel = networkIntel;
     }
@@ -31,6 +31,7 @@ public class AISecurityAnalyst {
         String networkContext = enrichNetworkData(report.getNetworkConnections());
 
         String ragContext = ragService.findMitigationStrategy("High resource usage or suspicious network connection");
+        if (ragContext == null) ragContext = "No specific MITRE data found.";
 
         String promptText = """
                 You are an advanced Cybersecurity AI Agent powered by DeepSeek.
@@ -52,7 +53,7 @@ public class AISecurityAnalyst {
                 1. Combine the live metrics with the provided Network Intelligence.
                 2. If a malicious IP is detected in 'Network Intelligence', prioritize it as a threat.
                 3. Use the MITRE context to suggest specific mitigation steps.
-                4. Output a concise JSON alert with fields: {risk_level, threat_type, description, recommendation}.
+                4. Output a concise JSON alert containing the following keys: risk_level, threat_type, description, recommendation.
                 """;
 
         PromptTemplate template = new PromptTemplate(promptText);
@@ -62,12 +63,12 @@ public class AISecurityAnalyst {
                 "network_context", networkContext,
                 "cpu", report.getCpuUsage(),
                 "ram", report.getRamUsedPercent(),
-                "processes", report.getProcesses().toString()
+                "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes"
         );
 
         Prompt prompt = template.create(params);
 
-        return chatClient.call(prompt).getResult().getOutput().getContent();
+        return chatModel.call(prompt).getResult().getOutput().getText();
     }
 
     private String enrichNetworkData(List<NetworkConnectionModel> connections) {
