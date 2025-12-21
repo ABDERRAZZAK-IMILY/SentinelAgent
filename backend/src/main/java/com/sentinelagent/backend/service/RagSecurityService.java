@@ -16,7 +16,6 @@ public class RagSecurityService {
     private static final Logger logger = LoggerFactory.getLogger(RagSecurityService.class);
     private final VectorStore vectorStore;
 
-    // threshold is 70% similarity
     private static final double SIMILARITY_THRESHOLD = 0.70;
 
     public RagSecurityService(VectorStore vectorStore) {
@@ -24,13 +23,14 @@ public class RagSecurityService {
     }
 
 
-    // the method to perform RAG search and return mitigation strategies
     public String findMitigationStrategy(String threatDescription) {
         logger.info(" Performing RAG search for: [{}]", threatDescription);
 
-        SearchRequest request = SearchRequest.query(threatDescription)
-                .withTopK(2)
-                .withSimilarityThreshold(SIMILARITY_THRESHOLD);
+        SearchRequest request = SearchRequest.builder()
+                .query(threatDescription)
+                .topK(2)
+                .similarityThreshold(SIMILARITY_THRESHOLD)
+                .build();
 
         List<Document> similarDocs = vectorStore.similaritySearch(request);
 
@@ -47,7 +47,8 @@ public class RagSecurityService {
     private String formatDocumentResponse(Document doc) {
         String technique = (String) doc.getMetadata().getOrDefault("technique_name", "Unknown Technique");
         String mitreId = (String) doc.getMetadata().getOrDefault("mitre_id", "T????");
-        String content = doc.getContent();
+
+        String content = doc.getText();
 
         return String.format("""
                  **MITRE ATT&CK Match:** %s (%s)
