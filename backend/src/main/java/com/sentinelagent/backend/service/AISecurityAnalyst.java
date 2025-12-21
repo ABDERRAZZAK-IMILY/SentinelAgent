@@ -2,7 +2,7 @@ package com.sentinelagent.backend.service;
 
 import com.sentinelagent.backend.model.MetricReport;
 import com.sentinelagent.backend.model.NetworkConnectionModel;
-import org.springframework.ai.chat.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.stereotype.Service;
@@ -14,14 +14,14 @@ import java.util.stream.Collectors;
 @Service
 public class AISecurityAnalyst {
 
-    private final ChatClient chatClient;
+    private final ChatModel chatModel;
     private final RagSecurityService ragService;
     private final NetworkIntelligenceService networkIntel;
 
-    public AISecurityAnalyst(ChatClient chatClient,
+    public AISecurityAnalyst(ChatModel chatModel,
                              RagSecurityService ragService,
                              NetworkIntelligenceService networkIntel) {
-        this.chatClient = chatClient;
+        this.chatModel = chatModel;
         this.ragService = ragService;
         this.networkIntel = networkIntel;
     }
@@ -58,16 +58,16 @@ public class AISecurityAnalyst {
         PromptTemplate template = new PromptTemplate(promptText);
 
         Map<String, Object> params = Map.of(
-                "rag_context", ragContext,
+                "rag_context", ragContext != null ? ragContext : "No specific data found",
                 "network_context", networkContext,
                 "cpu", report.getCpuUsage(),
                 "ram", report.getRamUsedPercent(),
-                "processes", report.getProcesses().toString()
+                "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes data"
         );
 
         Prompt prompt = template.create(params);
 
-        return chatClient.call(prompt).getResult().getOutput().getContent();
+        return chatModel.call(prompt).getResult().getOutput().getText();
     }
 
     private String enrichNetworkData(List<NetworkConnectionModel> connections) {
