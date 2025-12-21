@@ -1,196 +1,159 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
+	"sort"
 	"time"
 
-	"github.com/segmentio/kafka-go"
+	"github.com/IBM/sarama"
 	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/process"
 	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
-var writer *kafka.Writer
+type MetricReport struct {
+	CpuUsage       float64             `json:"cpuUsage"`
+	RamUsedPercent float64             `json:"ramUsedPercent"`
+	Processes      []ProcessModel      `json:"processes"`
+	Network        []NetworkConnection `json:"networkConnections"`
+}
 
-type ProcessInfo struct {
-	PID      int32   `json:"pid"`
+type ProcessModel struct {
+	Pid      int32   `json:"pid"`
 	Name     string  `json:"name"`
-	CPU      float64 `json:"cpu"`
+	CpuUsage float64 `json:"cpuUsage"`
 	Username string  `json:"username"`
 }
 
-type NetworkConnectionInfo struct {
-	PID          int32  `json:"pid"`
-	LocalAddress string `json:"local_address"`
-	LocalPort    uint32 `json:"local_port"`
-	RemoteAddress string `json:"remote_address"`
-	RemotePort   uint32 `json:"remote_port"`
-	Status       string `json:"status"`
+type NetworkConnection struct {
+	Pid           int32  `json:"pid"`
+	LocalAddress  string `json:"localAddress"`
+	LocalPort     uint32 `json:"localPort"`
+	RemoteAddress string `json:"remoteAddress"`
+	RemotePort    uint32 `json:"remotePort"`
+	Status        string `json:"status"`
 }
 
+const (
+	KafkaBroker = "localhost:9092"
+	KafkaTopic  = "agent-data"
+)
+
 func main() {
-	f, err := os.OpenFile("sentinelagent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	fmt.Println(" Starting SentinelAgent (Optimized for AI)...")
+
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+
+	producer, err := sarama.NewSyncProducer([]string{KafkaBroker}, config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(" Failed to start Kafka producer: %v", err)
 	}
-	defer f.Close()
-	log.SetOutput(f)
+	defer producer.Close()
 
-	err = createTopic("127.0.0.1:9092", "agent-data")
-	if err != nil {
-		log.Println(" Failed to create topic:", err)
-	} else {
-		log.Println(" Topic 'agent-data' ready.")
-	}
-
-	writer = kafka.NewWriter(kafka.WriterConfig{
-		Brokers: []string{"127.0.0.1:9092"},
-		Topic:   "agent-data",
-	})
-
-	log.Println(" Go Agent started. Sending data every 10 seconds...")
+	fmt.Println(" Connected to Kafka. Sending metrics every 10 seconds...")
 
 	for {
-		sendSystemMetrics()
+		report := collectMetrics()
+
+		jsonBytes, err := json.Marshal(report)
+		if err != nil {
+			log.Println("Error marshalling JSON:", err)
+			continue
+		}
+
+		msg := &sarama.ProducerMessage{
+			Topic: KafkaTopic,
+			Value: sarama.StringEncoder(jsonBytes),
+		}
+
+		_, _, err = producer.SendMessage(msg)
+		if err != nil {
+			log.Printf(" Failed to send message: %v", err)
+		} else {
+			fmt.Printf(" Data Sent! [CPU: %.1f%% | RAM: %.1f%% | Active Procs: %d]\n",
+				report.CpuUsage, report.RamUsedPercent, len(report.Processes))
+		}
+
 		time.Sleep(10 * time.Second)
 	}
 }
 
-func createTopic(brokerAddr, topic string) error {
-	conn, err := kafka.Dial("tcp", brokerAddr)
-	if err != nil {
-		return fmt.Errorf("failed to connect to Kafka broker: %v", err)
-	}
-	defer conn.Close()
-
-	controller, err := conn.Controller()
-	if err != nil {
-		return fmt.Errorf("failed to get controller: %v", err)
+func collectMetrics() MetricReport {
+	// CPU
+	cpuPercent, _ := cpu.Percent(time.Second, false)
+	cpuVal := 0.0
+	if len(cpuPercent) > 0 {
+		cpuVal = cpuPercent[0]
 	}
 
-	controllerConn, err := kafka.Dial("tcp", fmt.Sprintf("%s:%d", controller.Host, controller.Port))
-	if err != nil {
-		return fmt.Errorf("failed to connect to controller: %v", err)
-	}
-	defer controllerConn.Close()
+	// RAM
+	vMem, _ := mem.VirtualMemory()
 
-	topicConfigs := []kafka.TopicConfig{
-		{
-			Topic:             topic,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		},
-	}
+	procs := getTopProcesses(5)
 
-	err = controllerConn.CreateTopics(topicConfigs...)
-	if err != nil {
-		return fmt.Errorf("failed to create topic: %v", err)
+	conns := getNetworkConnections()
+
+	return MetricReport{
+		CpuUsage:       cpuVal,
+		RamUsedPercent: vMem.UsedPercent,
+		Processes:      procs,
+		Network:        conns,
 	}
-	return nil
 }
 
-func sendSystemMetrics() {
-	data := make(map[string]interface{})
+func getTopProcesses(limit int) []ProcessModel {
+	ps, _ := process.Processes()
+	var models []ProcessModel
 
-	cpuPercents, err := cpu.Percent(0, false)
-	if err == nil && len(cpuPercents) > 0 {
-		data["cpu"] = cpuPercents[0]
-	}
+	for _, p := range ps {
+		name, _ := p.Name()
+		cpuP, _ := p.CPUPercent()
+		user, _ := p.Username()
 
-	vmStat, err := mem.VirtualMemory()
-	if err == nil {
-		data["ram_used_percent"] = vmStat.UsedPercent
-		data["ram_total_mb"] = vmStat.Total / 1024 / 1024
-	}
-
-	diskStat, err := disk.Usage("C:")
-	if err == nil {
-		data["disk_used_percent"] = diskStat.UsedPercent
-		data["disk_total_gb"] = diskStat.Total / 1024 / 1024 / 1024
-	}
-
-	procList := []ProcessInfo{}
-
-
-	
-
-	processes, err := process.Processes()
-	if err != nil {
-		log.Println(" Error getting processes:", err)
-	} else {
-		for _, p := range processes {
-			name, errName := p.Name()
-			if errName != nil {
-				name = "N/A" // N/A = Not Available
-			}
-
-			cpuPercent, errCPU := p.CPUPercent()
-			if errCPU != nil {
-				cpuPercent = 0.0
-			}
-
-			username, errUser := p.Username()
-			if errUser != nil {
-				username = "N/A"
-			}
-
-			procList = append(procList, ProcessInfo{
-				PID:      p.Pid,
+		if cpuP > 0.1 {
+			models = append(models, ProcessModel{
+				Pid:      p.Pid,
 				Name:     name,
-				CPU:      cpuPercent,
-				Username: username,
+				CpuUsage: cpuP,
+				Username: user,
 			})
 		}
 	}
 
-	data["processes"] = procList
+	sort.Slice(models, func(i, j int) bool {
+		return models[i].CpuUsage > models[j].CpuUsage
+	})
 
+	if len(models) > limit {
+		return models[:limit]
+	}
+	return models
+}
 
-		netList := []NetworkConnectionInfo{}
+func getNetworkConnections() []NetworkConnection {
+	connections, _ := net.Connections("inet")
+	var models []NetworkConnection
 
-
-	connections, err := net.Connections("tcp")
-	if err != nil {
-		log.Println(" Error getting network connections:", err)
-	} else {
-		for _, c := range connections {
-			if c.Raddr.IP != "" {
-				netList = append(netList, NetworkConnectionInfo{
-					PID:          c.Pid,
-					LocalAddress: c.Laddr.IP,
-					LocalPort:    c.Laddr.Port,
-					RemoteAddress: c.Raddr.IP,
-					RemotePort:   c.Raddr.Port,
-					Status:       c.Status,
-				})
+	count := 0
+	for _, c := range connections {
+		if c.Status == "ESTABLISHED" || c.Status == "LISTEN" {
+			models = append(models, NetworkConnection{
+				Pid:           c.Pid,
+				LocalAddress:  c.Laddr.IP,
+				LocalPort:     c.Laddr.Port,
+				RemoteAddress: c.Raddr.IP,
+				RemotePort:    c.Raddr.Port,
+				Status:        c.Status,
+			})
+			count++
+			if count >= 5 {
+				break
 			}
 		}
 	}
-	data["network_connections"] = netList
-
-
-
-	msgBytes, err := json.Marshal(data)
-	if err != nil {
-		log.Println(" Error marshaling data:", err)
-		return
-	}
-
-	err = writer.WriteMessages(context.Background(),
-		kafka.Message{
-			Key:   []byte(fmt.Sprintf("agent-%d", time.Now().Unix())),
-			Value: msgBytes,
-		})
-	if err != nil {
-		log.Println(" Error writing to Kafka:", err)
-		return
-	}
-
-	log.Println(" Sent data to Kafka (with processes):", string(msgBytes))
+	return models
 }
