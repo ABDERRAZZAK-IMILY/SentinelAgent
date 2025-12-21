@@ -14,6 +14,15 @@ services:
       timeout: 5s
       retries: 5
 
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+
   kafka:
     image: wurstmeister/kafka:2.13-2.8.1
     container_name: kafka
@@ -57,3 +66,4 @@ services:
 
 volumes:
   mongo-data:
+
