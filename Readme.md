@@ -20,6 +20,10 @@ SentinelAgent is an advanced cybersecurity platform that leverages artificial in
 ![alt text]({8005EEF6-00F3-4D45-B7C1-687AF24FBFC7}.png)
 
 
+## mmrd
+
+![alt text](<Metric Report Threat-2025-12-21-162726-1.png>)
+
 ## classe diagrame
 
 ![alt text]({639C7CE6-51C6-4877-B1C2-3F2C959E2D5A}.png)
