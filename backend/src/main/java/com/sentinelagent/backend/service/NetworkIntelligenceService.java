@@ -39,7 +39,7 @@ public class NetworkIntelligenceService {
                 return score > 50;
             }
         } catch (Exception e) {
-            System.err.println("⚠️ API Call Failed for IP: " + ip + " - " + e.getMessage());
+            System.err.println(" API Call Failed for IP: " + ip + " - " + e.getMessage());
         }
 
         return false;
