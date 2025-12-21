@@ -1,40 +1,57 @@
 package com.sentinelagent.backend.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class RagSecurityService {
 
+    private static final Logger logger = LoggerFactory.getLogger(RagSecurityService.class);
     private final VectorStore vectorStore;
+
+    // threshold is 70% similarity
+    private static final double SIMILARITY_THRESHOLD = 0.70;
 
     public RagSecurityService(VectorStore vectorStore) {
         this.vectorStore = vectorStore;
     }
 
-    public void ingestKnowledgeBase() {
-        List<Document> documents = List.of(
-                new Document("Cryptojacking involves high CPU usage by unknown processes like 'xmrig'. Mitigation: Kill process and block mining pools IPs.", Map.of("threat_type", "mining")),
-                new Document("Reverse Shell connection often uses tools like 'nc.exe' or 'powershell'. Mitigation: Isolate host and scan for backdoors.", Map.of("threat_type", "intrusion"))
-        );
 
-        vectorStore.add(documents);
-        System.out.println(" Knowledge Base Ingested into Qdrant!");
-    }
+    // the method to perform RAG search and return mitigation strategies
+    public String findMitigationStrategy(String threatDescription) {
+        logger.info(" Performing RAG search for: [{}]", threatDescription);
 
-    public String searchForMitigation(String threatDescription) {
-        List<Document> similarDocs = vectorStore.similaritySearch(
-                SearchRequest.query(threatDescription).withTopK(1)
-        );
+        SearchRequest request = SearchRequest.query(threatDescription)
+                .withTopK(2)
+                .withSimilarityThreshold(SIMILARITY_THRESHOLD);
+
+        List<Document> similarDocs = vectorStore.similaritySearch(request);
 
         if (similarDocs.isEmpty()) {
-            return "No specific mitigation found in knowledge base.";
+            logger.warn(" No relevant knowledge found in Qdrant for this threat.");
+            return "No specific playbook found in the knowledge base. Recommended action: Manual investigation and host isolation.";
         }
 
-        return similarDocs.get(0).getContent();
+        return similarDocs.stream()
+                .map(this::formatDocumentResponse)
+                .collect(Collectors.joining("\n---\n"));
+    }
+
+    private String formatDocumentResponse(Document doc) {
+        String technique = (String) doc.getMetadata().getOrDefault("technique_name", "Unknown Technique");
+        String mitreId = (String) doc.getMetadata().getOrDefault("mitre_id", "T????");
+        String content = doc.getContent();
+
+        return String.format("""
+                 **MITRE ATT&CK Match:** %s (%s)
+                 **Insight:** %s
+                """, technique, mitreId, content);
     }
 }
