@@ -23,6 +23,9 @@ public class MetricReport {
     private double diskUsedPercent;
     private long diskTotalGb;
 
+    private long bytesSentSec;
+    private long bytesRecvSec;
+
     private List<ProcessModel> processes;
     private List<NetworkConnectionModel> networkConnections;
 
