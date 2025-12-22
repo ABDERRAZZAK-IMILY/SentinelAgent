@@ -109,3 +109,20 @@ This document describes the architecture and main components of the **SentinelAg
 | Dashboard      | Angular              | Displays real-time alerts, stats, and agent data  |
 +----------------+----------------------+---------------------------------------------------+
 ```
+
+
+###  comparing with CrowdStrike
+
+```
+
+|elment           |SentilAgent | CrowdStrike |
+| --------------- | --- | ----------- |
+| Edge ML         | ✔   | ✔           |
+| Edge Reasoning  | ✔✔✔ | ✖           |
+| Explainability  | ✔✔  | weak     |
+| Temporal Memory | ✔✔✔ | limited       |
+| LLM Integration | ✔✔✔ | ✖           |
+| Adaptivity      | ✔✔  | slow        |
+
+
+```
