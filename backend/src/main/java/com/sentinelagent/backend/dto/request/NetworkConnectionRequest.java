@@ -21,5 +21,9 @@ public class NetworkConnectionRequest {
     @JsonProperty("remote_port")
     private int remotePort;
 
+    @JsonProperty("process_name")
+    private String processName;
+
+
     private String status;
 }
