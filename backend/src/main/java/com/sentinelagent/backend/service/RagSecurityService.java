@@ -1,5 +1,6 @@
 package com.sentinelagent.backend.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -10,10 +11,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
+
+@Slf4j
 @Service
 public class RagSecurityService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RagSecurityService.class);
     private final VectorStore vectorStore;
 
     private static final double SIMILARITY_THRESHOLD = 0.70;
@@ -24,7 +27,7 @@ public class RagSecurityService {
 
 
     public String findMitigationStrategy(String threatDescription) {
-        logger.info(" Performing RAG search for: [{}]", threatDescription);
+        log.info(" Performing RAG search for: [{}]", threatDescription);
 
         SearchRequest request = SearchRequest.builder()
                 .query(threatDescription)
@@ -35,7 +38,7 @@ public class RagSecurityService {
         List<Document> similarDocs = vectorStore.similaritySearch(request);
 
         if (similarDocs.isEmpty()) {
-            logger.warn(" No relevant knowledge found in Qdrant for this threat.");
+            log.warn(" No relevant knowledge found in Qdrant for this threat.");
             return "No specific playbook found in the knowledge base. Recommended action: Manual investigation and host isolation.";
         }
 
