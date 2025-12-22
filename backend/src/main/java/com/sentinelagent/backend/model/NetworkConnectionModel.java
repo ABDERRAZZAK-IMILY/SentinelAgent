@@ -14,4 +14,6 @@ public class NetworkConnectionModel {
     private String remoteAddress;
     private int remotePort;
     private String status;
+
+    private String processName;
 }

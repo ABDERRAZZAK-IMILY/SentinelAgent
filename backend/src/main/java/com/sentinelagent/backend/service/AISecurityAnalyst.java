@@ -25,17 +25,19 @@ public class AISecurityAnalyst {
         this.ragService = ragService;
         this.networkIntel = networkIntel;
     }
-
     public String analyzeRisk(MetricReport report) {
 
         String networkContext = enrichNetworkData(report.getNetworkConnections());
+
+        double uploadMB = report.getBytesSentSec() / 1024.0 / 1024.0;
+        double downloadMB = report.getBytesRecvSec() / 1024.0 / 1024.0;
 
         String ragContext = ragService.findMitigationStrategy("High resource usage or suspicious network connection");
         if (ragContext == null) ragContext = "No specific MITRE data found.";
 
         String promptText = """
                 You are an advanced Cybersecurity AI Agent powered by DeepSeek.
-                Your task is to analyze system metrics and detect potential threats.
+                Your task is to analyze system metrics and detect potential threats (Ransomware, Spyware, C2 Communication).
                 
                 --- INTELLIGENCE CONTEXT ---
                 Knowledge Base (MITRE ATT&CK):
@@ -47,12 +49,14 @@ public class AISecurityAnalyst {
                 --- LIVE SYSTEM METRICS ---
                 - CPU Usage: {cpu}%
                 - RAM Usage: {ram}%
+                - Network Upload Speed: {upload} MB/s
+                - Network Download Speed: {download} MB/s
                 - Active Processes: {processes}
                 
                 --- INSTRUCTIONS ---
-                1. Combine the live metrics with the provided Network Intelligence.
-                2. If a malicious IP is detected in 'Network Intelligence', prioritize it as a threat.
-                3. Use the MITRE context to suggest specific mitigation steps.
+                1. Analyze 'Network Intelligence'. If a known malicious IP is found, FLAGGED immediately.
+                2. Check if 'Network Upload Speed' is high while CPU is high (Potential Data Theft).
+                3. Look at the process names in the network connections. Is a weird process connecting to the internet?
                 4. Output a concise JSON alert containing the following keys: risk_level, threat_type, description, recommendation.
                 """;
 
@@ -63,11 +67,12 @@ public class AISecurityAnalyst {
                 "network_context", networkContext,
                 "cpu", report.getCpuUsage(),
                 "ram", report.getRamUsedPercent(),
+                "upload", String.format("%.2f", uploadMB),
+                "download", String.format("%.2f", downloadMB),
                 "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes"
         );
 
         Prompt prompt = template.create(params);
-
         return chatModel.call(prompt).getResult().getOutput().getText();
     }
 
@@ -80,10 +85,12 @@ public class AISecurityAnalyst {
                     String country = networkIntel.getCountryByIp(ip);
                     boolean isMalicious = networkIntel.isMaliciousIp(ip);
 
+                    String pName = (conn.getProcessName() != null) ? conn.getProcessName() : "Unknown";
+
                     return String.format(
-                            "- Remote IP: %s | Port: %d | Location: %s | Reputation: %s",
+                            "- Process: %s | Remote IP: %s | Location: %s | Reputation: %s",
+                            pName,
                             ip,
-                            conn.getRemotePort(),
                             country,
                             isMalicious ? "MALICIOUS " : "Safe"
                     );
