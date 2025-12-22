@@ -70,7 +70,10 @@ public class MetricReportMapper {
                 req.getLocalPort(),
                 req.getRemoteAddress(),
                 req.getRemotePort(),
-                req.getStatus()
+                req.getStatus(),
+                req.getProcessName()
         );
     }
+
+
 }
