@@ -1,0 +1,96 @@
+<div class="login-container">
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+      </svg>
+    </div>
+    <h1>Iris Scan Login</h1>
+    <p class="subtitle">Position your eye in front of the camera</p>
+  </div>
+
+  <div class="username-section">
+    <label for="username">Username</label>
+    <input 
+      type="text" 
+      id="username" 
+      [value]="username()" 
+      (input)="onUsernameChange($event)"
+      placeholder="Enter your username"
+      [disabled]="isScanning()">
+  </div>
+
+  <div class="video-section">
+    <div class="camera-container">
+      <video #video autoplay playsinline></video>
+      <canvas #overlayCanvas id="overlayCanvas"></canvas>
+      <canvas #canvas id="canvas"></canvas>
+    </div>
+
+    <div class="eye-preview">
+      <div class="eye-zoom-container">
+        <div class="eye-zoom-title">Eye Detection</div>
+        <img 
+          id="eyePreview" 
+          [src]="eyePreviewSrc()" 
+          [class.detected]="eyeDetected()"
+          alt="Eye Preview">
+        <div class="detection-status">
+          <div class="detection-dot" [class.active]="eyeDetected()"></div>
+          <span class="detection-text">{{ detectionStatusText() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-message" [ngClass]="statusMessage().type">
+    {{ statusMessage().text }}
+  </div>
+
+  <div class="btn-container">
+    <button 
+      class="btn btn-primary" 
+      [disabled]="buttonsDisabled()" 
+      (click)="authenticate()">
+      @if (isScanning()) {
+        <div class="loading-spinner"></div>
+        <span>Verifying...</span>
+      } @else {
+        <svg viewBox="0 0 24 24">
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+        </svg>
+        <span>Authenticate</span>
+      }
+    </button>
+    <button 
+      class="btn btn-enroll" 
+      [disabled]="buttonsDisabled()" 
+      (click)="enroll()">
+      @if (isScanning()) {
+        <div class="loading-spinner"></div>
+        <span>Enrolling...</span>
+      } @else {
+        <svg viewBox="0 0 24 24">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+        <span>Enroll</span>
+      }
+    </button>
+  </div>
+
+  @if (showSimilarity()) {
+    <div class="similarity-score show">
+      <div class="similarity-value">{{ similarityScore()?.toFixed(1) }}%</div>
+      <div class="similarity-label">Match Score</div>
+    </div>
+  }
+
+  <div class="enrollment-status">
+    <span class="status-dot" [class.enrolled]="isEnrolled()" [class.not-enrolled]="!isEnrolled()"></span>
+    <span>{{ isEnrolled() ? 'Iris enrolled ✓' : 'No iris enrolled' }}</span>
+  </div>
+
+  <div class="footer">
+    <p>Smart Security System | <a href="#">SentinelAgent</a></p>
+  </div>
+</div>

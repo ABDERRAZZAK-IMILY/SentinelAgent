@@ -1,0 +1,81 @@
+<div class="enroll-page">
+  <div class="enroll-header">
+    <a routerLink="/login" class="back-link">
+      <svg viewBox="0 0 24 24">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+      </svg>
+      Back to Login
+    </a>
+    <h1>Admin Enrollment</h1>
+    <p class="subtitle">Set up your admin account with iris authentication</p>
+  </div>
+
+  @if (enrollmentComplete()) {
+    <div class="success-card">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+      </div>
+      <h2>Enrollment Successful!</h2>
+      <p>Your iris has been enrolled. Redirecting to dashboard...</p>
+      <div class="loading-bar"></div>
+    </div>
+  } @else {
+    <div class="enroll-steps">
+      <div class="step" [class.completed]="setupComplete()" [class.active]="!setupComplete()">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Create Admin Account</h3>
+          <p>First, create your admin account in the system</p>
+          
+          @if (!setupComplete()) {
+            <button class="btn btn-setup" (click)="setupAdminAccount()" [disabled]="isSettingUp()">
+              @if (isSettingUp()) {
+                <div class="spinner"></div>
+                <span>Creating...</span>
+              } @else {
+                <svg viewBox="0 0 24 24">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                <span>Create Admin Account</span>
+              }
+            </button>
+          } @else {
+            <div class="step-success">
+              <svg viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+              <span>Admin account ready</span>
+            </div>
+          }
+
+          @if (setupError()) {
+            <div class="step-error">{{ setupError() }}</div>
+          }
+        </div>
+      </div>
+
+      <div class="step" [class.active]="setupComplete()">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>Enroll Your Iris</h3>
+          <p>Position your eye in front of the camera and click "Enroll"</p>
+          
+          @if (setupComplete()) {
+            <div class="iris-container">
+              <app-iris-login 
+                (authenticationSuccess)="onAuthSuccess($event)"
+                (authenticationFailed)="onAuthFailed($event)">
+              </app-iris-login>
+            </div>
+          } @else {
+            <div class="step-disabled">
+              Complete step 1 first
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
