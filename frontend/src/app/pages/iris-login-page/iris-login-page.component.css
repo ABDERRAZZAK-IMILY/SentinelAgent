@@ -1,0 +1,58 @@
+.iris-login-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1628 0%, #1a2d4a 50%, #0d1f35 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.page-container {
+  width: 100%;
+  max-width: 450px;
+}
+
+.back-link {
+  margin-bottom: 20px;
+}
+
+.back-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.back-link a:hover {
+  color: #00d4ff;
+}
+
+.back-link svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.page-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.page-footer p {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.page-footer a {
+  color: #00d4ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.page-footer a:hover {
+  text-decoration: underline;
+}
