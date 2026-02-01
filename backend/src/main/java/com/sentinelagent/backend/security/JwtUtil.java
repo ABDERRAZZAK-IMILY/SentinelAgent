@@ -1,39 +1,35 @@
 package com.sentinelagent.backend.security;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import org.springframework.beans.factory.annotation.Value;
+import com.sentinelagent.backend.infrastructure.security.JwtService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
 import java.util.List;
 
+/**
+ * @deprecated Use
+ *             {@link com.sentinelagent.backend.infrastructure.security.JwtService}
+ *             instead.
+ *             This class delegates to the new JwtService for backward
+ *             compatibility.
+ */
+@Deprecated(forRemoval = true)
 @Component
+@RequiredArgsConstructor
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
-    private String secret;
-
-    @Value("${jwt.expiration}")
-    private long expiration;
+    private final JwtService jwtService;
 
     public String generateToken(String username, List<String> roles) {
-        return JWT.create()
-                .withSubject(username)
-                .withClaim("roles", roles)
-                .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis() + expiration))
-                .sign(Algorithm.HMAC256(secret.getBytes()));
+        return jwtService.generateToken(username, roles);
     }
 
     public DecodedJWT validateToken(String token) {
-        return JWT.require(Algorithm.HMAC256(secret.getBytes()))
-                .build()
-                .verify(token);
+        return jwtService.validateToken(token);
     }
 
     public String getUsername(DecodedJWT jwt) {
-        return jwt.getSubject();
+        return jwtService.getUsername(jwt);
     }
 }
