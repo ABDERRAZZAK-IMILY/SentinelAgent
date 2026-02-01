@@ -5,13 +5,29 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.util.List;
 
+/**
+ * Request DTO for metric reports received from agents via Kafka.
+ * Updated to include agent authentication fields.
+ */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MetricReportRequest {
 
-    private double cpu;
+    // Agent authentication fields
+    @JsonProperty("agentId")
+    private String agentId;
 
-    @JsonProperty("ram_used_percent")
+    @JsonProperty("apiKey")
+    private String apiKey;
+
+    @JsonProperty("hostname")
+    private String hostname;
+
+    // System metrics
+    @JsonProperty("cpuUsage")
+    private double cpuUsage;
+
+    @JsonProperty("ramUsedPercent")
     private double ramUsedPercent;
 
     @JsonProperty("ram_total_mb")
@@ -23,8 +39,16 @@ public class MetricReportRequest {
     @JsonProperty("disk_total_gb")
     private long diskTotalGb;
 
+    // Network speed metrics
+    @JsonProperty("bytesSentSec")
+    private long bytesSentSec;
+
+    @JsonProperty("bytesRecvSec")
+    private long bytesRecvSec;
+
+    // Process and network details
     private List<ProcessRequest> processes;
 
-    @JsonProperty("network_connections")
+    @JsonProperty("networkConnections")
     private List<NetworkConnectionRequest> networkConnections;
 }
