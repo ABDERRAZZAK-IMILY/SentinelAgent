@@ -1,63 +1,61 @@
 # SentinelAgent
 
-AI-Powered Cyber Attack Detection Platform
+An early-stage SOC-oriented cybersecurity platform that correlates telemetry (network / host signals) with AI-assisted analysis to surface suspicious activity and generate actionable security reports.
 
-## Overview
+> Status: Active development (not production-ready yet).
 
-SentinelAgent is an advanced cybersecurity platform that leverages artificial intelligence to detect and respond to cyber attacks in real-time. By analyzing network traffic, system behaviors, and threat patterns, SentinelAgent provides proactive protection against modern cyber threats.
+## Why SentinelAgent?
+Modern security teams need fast visibility, triage assistance, and clear reporting. SentinelAgent focuses on:
+- Collecting/ingesting security signals (telemetry)
+- Normalizing & correlating events
+- Applying AI-assisted triage (classification, enrichment, summaries)
+- Producing dashboards and investigation-ready reports
 
-## Features
+## Architecture (high level)
+**Components**
+- **backend/**: Core API, event ingestion, correlation logic, storage access, auth (if applicable)
+- **frontend/**: SOC dashboard (alerts, metrics, reports)
+- **AI/**: notebooks / ML experiments / models for detection & enrichment
+- **iris_service/**: auxiliary service (e.g., enrichment, integrations, routing) — describe purpose
 
-- **Real-time Threat Detection** - Continuous monitoring and instant threat identification
-- **AI-Powered Analysis** - Machine learning models trained on latest attack patterns
-- **Automated Response** - Quick mitigation of detected threats
-- **Comprehensive Reporting** - Detailed insights and analytics dashboard
-- **Easy Integration** - Compatible with existing security infrastructure
+**Data flow**
+1) Telemetry → backend ingestion
+2) Backend → normalization/correlation → storage
+3) AI service → enrichment / scoring (optional sync/async)
+4) Frontend → consumes backend APIs → dashboards/reports
+
+> See diagrams in the repository (Use Case / Class Diagram / etc.)
 
 
-## use case diagrame
+### use case diagrame
 
 ![alt text]({8005EEF6-00F3-4D45-B7C1-687AF24FBFC7}.png)
 
 
-## mmrd
+### mmrd
 
 ![alt text](<Metric Report Threat-2025-12-21-162726-1.png>)
 
-## classe diagrame
+### classe diagrame
 
 ![alt text]({639C7CE6-51C6-4877-B1C2-3F2C959E2D5A}.png)
 
-## Installation
 
+
+## Tech Stack
+- Frontend: TypeScript (UI dashboard)
+- Backend: Java (API/services)
+- AI: Python (ML notebooks/models)
+- Additional tooling: Go (utilities / agent experiments)
+
+## Features
+- Real-time / near real-time alerting (MVP scope)
+- AI-assisted analysis (triage, enrichment)
+- Metrics & reporting dashboards
+
+## Quick Start (local)
+### 1) Clone
 ```bash
 git clone https://github.com/ABDERRAZZAK-IMILY/SentinelAgent.git
 cd SentinelAgent
-```
 
-## Quick Start
-
-```bash
-go run test.go
-```
-
-## Configuration
-
-Edit `config.yml` to customize detection parameters and set up your environment.
-
-## Requirements
-
-- java 17
-- golang
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
