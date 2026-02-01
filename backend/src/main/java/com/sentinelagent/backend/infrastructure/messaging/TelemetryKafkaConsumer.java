@@ -1,21 +1,22 @@
 package com.sentinelagent.backend.infrastructure.messaging;
 
-import com.sentinelagent.backend.application.telemetry.ValidateTelemetryUseCase;
+import com.sentinelagent.backend.application.security.AnalyzeSecurityUseCase;
 import com.sentinelagent.backend.application.telemetry.SaveTelemetryUseCase;
+import com.sentinelagent.backend.application.telemetry.ValidateTelemetryUseCase;
 import com.sentinelagent.backend.application.telemetry.dto.TelemetryData;
 import com.sentinelagent.backend.domain.agent.Agent;
 import com.sentinelagent.backend.domain.agent.exception.InvalidAgentCredentialsException;
+import com.sentinelagent.backend.domain.telemetry.MetricReport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 /**
- * Kafka Consumer for processing agent telemetry data.
- * Part of the Infrastructure Layer.
+ * Main Kafka message consumer (Telemetry Ingestion Pipeline).
+ *
+ * This component follows Clean Architecture principles by acting as a bridge
+ * between the Infrastructure layer (Kafka) and the Application layer (Use Cases).
  */
 @Component
 @Slf4j
@@ -24,76 +25,45 @@ public class TelemetryKafkaConsumer {
 
     private final ValidateTelemetryUseCase validateTelemetryUseCase;
     private final SaveTelemetryUseCase saveTelemetryUseCase;
+    private final AnalyzeSecurityUseCase analyzeSecurityUseCase;
 
-    @KafkaListener(topics = "agent-data", groupId = "sentinel-consumer-group")
-    public void consume(TelemetryKafkaMessage message) {
-        log.info("📥 Received telemetry from Kafka");
+    @KafkaListener(
+            topics = "agent-data",
+            groupId = "sentinel-consumer-group",
+            containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void onMessage(TelemetryKafkaMessage message) {
+
+        log.info(" [Kafka] Receiving new data from Agent ID: {}", message.getAgentId());
 
         try {
-            // Convert to telemetry data for validation
-            TelemetryData telemetryData = TelemetryData.builder()
-                    .agentId(message.getAgentId())
-                    .apiKey(message.getApiKey())
-                    .hostname(message.getHostname())
-                    .cpuUsage(message.getCpuUsage())
-                    .ramUsedPercent(message.getRamUsedPercent())
-                    .ramTotalMb(message.getRamTotalMb())
-                    .diskUsedPercent(message.getDiskUsedPercent())
-                    .diskTotalGb(message.getDiskTotalGb())
-                    .bytesSentSec(message.getBytesSentSec())
-                    .bytesRecvSec(message.getBytesRecvSec())
-                    .processes(mapProcesses(message.getProcesses()))
-                    .networkConnections(mapConnections(message.getNetworkConnections()))
-                    .build();
+            TelemetryData telemetryData = message.toTelemetryData();
 
-            // Validate agent credentials
             Agent agent = validateTelemetryUseCase.execute(telemetryData);
+            log.debug(" Agent identity successfully verified: {}", agent.getHostname());
 
-            if (agent != null) {
-                log.info("✅ Telemetry from registered agent: {} ({})",
-                        agent.getHostname(), agent.getId().getValue());
-            } else {
-                log.info("📡 Anonymous telemetry received (no agent registration)");
-            }
+            MetricReport savedReport = saveTelemetryUseCase.execute(telemetryData);
+            log.info(
+                    " Report successfully saved. Report ID: {}",
+                    savedReport.getId().getValue()
+            );
 
-            // Save telemetry
-            var savedReport = saveTelemetryUseCase.execute(telemetryData);
-            log.info("💾 Saved report to DB with ID: {}", savedReport.getId().getValue());
+            log.debug(" Starting AI-based security analysis...");
+            analyzeSecurityUseCase.execute(savedReport);
 
         } catch (InvalidAgentCredentialsException ex) {
-            log.warn("🚫 Rejected telemetry from unauthorized agent: {}", ex.getMessage());
+            log.error(
+                    " Security alert: Unauthorized data received from Agent ID: {}. Reason: {}",
+                    message.getAgentId(),
+                    ex.getMessage()
+            );
+
         } catch (Exception ex) {
-            log.error("❌ Error processing telemetry: {}", ex.getMessage(), ex);
+            log.error(
+                    " Critical error while processing Kafka message: {}",
+                    ex.getMessage(),
+                    ex
+            );
         }
-    }
-
-    private List<TelemetryData.ProcessData> mapProcesses(List<TelemetryKafkaMessage.ProcessMessage> processes) {
-        if (processes == null)
-            return List.of();
-        return processes.stream()
-                .map(p -> TelemetryData.ProcessData.builder()
-                        .pid(p.getPid())
-                        .name(p.getName())
-                        .cpu(p.getCpu())
-                        .username(p.getUsername())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    private List<TelemetryData.NetworkConnectionData> mapConnections(
-            List<TelemetryKafkaMessage.NetworkConnectionMessage> connections) {
-        if (connections == null)
-            return List.of();
-        return connections.stream()
-                .map(c -> TelemetryData.NetworkConnectionData.builder()
-                        .pid(c.getPid())
-                        .localAddress(c.getLocalAddress())
-                        .localPort(c.getLocalPort())
-                        .remoteAddress(c.getRemoteAddress())
-                        .remotePort(c.getRemotePort())
-                        .status(c.getStatus())
-                        .processName(c.getProcessName())
-                        .build())
-                .collect(Collectors.toList());
     }
 }
