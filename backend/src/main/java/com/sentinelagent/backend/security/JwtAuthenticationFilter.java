@@ -1,52 +1,37 @@
 package com.sentinelagent.backend.security;
 
-import com.auth0.jwt.interfaces.DecodedJWT;
+import com.sentinelagent.backend.infrastructure.security.JwtAuthFilter;
+import com.sentinelagent.backend.infrastructure.security.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * @deprecated Use
+ *             {@link com.sentinelagent.backend.infrastructure.security.JwtAuthFilter}
+ *             instead.
+ *             This class delegates to the new JwtAuthFilter for backward
+ *             compatibility.
+ */
+@Deprecated(forRemoval = true)
 @Component
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
+    private final JwtAuthFilter delegateFilter;
+
+    public JwtAuthenticationFilter(JwtService jwtService) {
+        this.delegateFilter = new JwtAuthFilter(jwtService);
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String header = request.getHeader("Authorization");
-
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
-            try {
-                DecodedJWT jwt = jwtUtil.validateToken(token);
-                String username = jwtUtil.getUsername(jwt);
-                List<String> roles = jwt.getClaim("roles").asList(String.class);
-
-                var authorities = roles.stream()
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (Exception e) {
-                // Token invalid
-                SecurityContextHolder.clearContext();
-            }
-        }
-
-        filterChain.doFilter(request, response);
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
+        delegateFilter.doFilter(request, response, filterChain);
     }
 }
