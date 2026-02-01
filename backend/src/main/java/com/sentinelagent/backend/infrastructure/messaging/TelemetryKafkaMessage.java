@@ -2,6 +2,7 @@ package com.sentinelagent.backend.infrastructure.messaging;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sentinelagent.backend.application.telemetry.dto.TelemetryData;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -95,5 +96,39 @@ public class TelemetryKafkaMessage {
         private String processName;
 
         private String status;
+    }
+
+    public TelemetryData toTelemetryData() {
+        return TelemetryData.builder()
+                .agentId(this.agentId)
+                .apiKey(this.apiKey)
+                .hostname(this.hostname)
+                .cpuUsage(this.cpuUsage)
+                .ramUsedPercent(this.ramUsedPercent)
+                .ramTotalMb(this.ramTotalMb)
+                .diskUsedPercent(this.diskUsedPercent)
+                .diskTotalGb(this.diskTotalGb)
+                .bytesSentSec(this.bytesSentSec)
+                .bytesRecvSec(this.bytesRecvSec)
+                .processes(this.processes.stream()
+                        .map(p -> TelemetryData.ProcessData.builder()
+                                .pid(p.getPid())
+                                .name(p.getName())
+                                .cpu(p.getCpu())
+                                .username(p.getUsername())
+                                .build())
+                        .toList())
+                .networkConnections(this.networkConnections.stream()
+                        .map(n -> TelemetryData.NetworkConnectionData.builder()
+                                .pid(n.getPid())
+                                .localAddress(n.getLocalAddress())
+                                .localPort(n.getLocalPort())
+                                .remoteAddress(n.getRemoteAddress())
+                                .remotePort(n.getRemotePort())
+                                .status(n.getStatus())
+                                .processName(n.getProcessName())
+                                .build())
+                        .toList())
+                .build();
     }
 }
