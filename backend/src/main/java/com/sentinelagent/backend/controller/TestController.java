@@ -1,36 +1,39 @@
 package com.sentinelagent.backend.controller;
 
-import com.sentinelagent.backend.model.MetricReport;
-import com.sentinelagent.backend.model.ProcessModel;
-import com.sentinelagent.backend.service.AISecurityAnalyst;
+import com.sentinelagent.backend.application.security.AnalyzeSecurityUseCase;
+import com.sentinelagent.backend.domain.telemetry.MetricReport;
+import com.sentinelagent.backend.domain.telemetry.Process;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
 
+/**
+ * @deprecated Use {@link com.sentinelagent.backend.api.v1.test.TestController}
+ *             instead.
+ */
+@Deprecated(forRemoval = true)
 @RestController
-@RequestMapping("/api/test")
+@RequestMapping("/api/test-legacy")
+@RequiredArgsConstructor
 public class TestController {
 
-    private final AISecurityAnalyst aiAnalyst;
-
-    public TestController(AISecurityAnalyst aiAnalyst) {
-        this.aiAnalyst = aiAnalyst;
-    }
+    private final AnalyzeSecurityUseCase analyzeSecurityUseCase;
 
     @PostMapping("/simulate-attack")
     public String simulateAttack() {
-        MetricReport fakeReport = new MetricReport();
-        fakeReport.setCpuUsage(98.5);
-        fakeReport.setRamUsedPercent(85.0);
+        MetricReport fakeReport = MetricReport.builder()
+                .cpuUsage(20.5)
+                .ramUsedPercent(20.0)
+                .processes(List.of(
+                        Process.builder()
+                                .name("facebook.exe")
+                                .pid(666)
+                                .build()))
+                .build();
 
-        ProcessModel maliciousProcess = new ProcessModel();
-        maliciousProcess.setName("wannacry.exe");
-        maliciousProcess.setPid(666);
-        fakeReport.setProcesses(List.of(maliciousProcess));
-
-        String analysis = aiAnalyst.analyzeRisk(fakeReport);
-
-        return analysis;
+        return analyzeSecurityUseCase.execute(fakeReport);
     }
 }
