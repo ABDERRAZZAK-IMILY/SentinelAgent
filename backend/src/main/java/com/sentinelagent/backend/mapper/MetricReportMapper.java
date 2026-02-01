@@ -22,11 +22,21 @@ public class MetricReportMapper {
         }
 
         MetricReport report = new MetricReport();
-        report.setCpuUsage(req.getCpu());
+
+        // Agent info
+        report.setAgentId(req.getAgentId());
+        report.setHostname(req.getHostname());
+
+        // System metrics
+        report.setCpuUsage(req.getCpuUsage());
         report.setRamUsedPercent(req.getRamUsedPercent());
         report.setRamTotalMb(req.getRamTotalMb());
         report.setDiskUsedPercent(req.getDiskUsedPercent());
         report.setDiskTotalGb(req.getDiskTotalGb());
+
+        // Network speed
+        report.setBytesSentSec(req.getBytesSentSec());
+        report.setBytesRecvSec(req.getBytesRecvSec());
 
         report.setReceivedAt(LocalDateTime.now());
 
@@ -50,8 +60,7 @@ public class MetricReportMapper {
                 req.getPid(),
                 req.getName(),
                 req.getCpu(),
-                req.getUsername()
-        );
+                req.getUsername());
     }
 
     private List<NetworkConnectionModel> mapNetworkConnections(List<NetworkConnectionRequest> networkRequests) {
@@ -71,9 +80,7 @@ public class MetricReportMapper {
                 req.getRemoteAddress(),
                 req.getRemotePort(),
                 req.getStatus(),
-                req.getProcessName()
-        );
+                req.getProcessName());
     }
-
 
 }
