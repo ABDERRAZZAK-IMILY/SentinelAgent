@@ -1,0 +1,7 @@
+{
+  "serverUrl": "http://localhost:8080",
+  "agentId": "62cc714f-6b43-46cd-b8d1-7ad52a8d6007",
+  "apiKey": "snt_uohSupuMllhrEf0PuK49h59g8FHVvnyp6sL_vKde7iA",
+  "kafkaBroker": "127.0.0.1:9092",
+  "kafkaTopic": "agent-data"
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	stdnet "net"
 	"net/http"
 	"os"
 	"runtime"
@@ -14,8 +15,9 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/shirou/gopsutil/v3/cpu"
+	// "github.com/shirou/gopsutil/v3/disk" // optional (see collectMetrics)
 	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/net"
+	gnet "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -40,37 +42,47 @@ const (
 var config AgentConfig
 
 // ==================================================================
-//  Data Models
+//  Data Models (MATCH Java TelemetryKafkaMessage)
 // ==================================================================
 
 type MetricReport struct {
-	AgentID        string              `json:"agentId"`
-	ApiKey         string              `json:"apiKey"`
-	Hostname       string              `json:"hostname"`
-	CpuUsage       float64             `json:"cpuUsage"`
-	RamUsedPercent float64             `json:"ramUsedPercent"`
-	Processes      []ProcessModel      `json:"processes"`
-	Network        []NetworkConnection `json:"networkConnections"`
-	BytesSentSec   uint64              `json:"bytesSentSec"`
-	BytesRecvSec   uint64              `json:"bytesRecvSec"`
-	Timestamp      time.Time           `json:"timestamp"`
+	AgentID        string  `json:"agentId"`
+	ApiKey         string  `json:"apiKey"`
+	Hostname       string  `json:"hostname"`
+	CpuUsage       float64 `json:"cpuUsage"`
+	RamUsedPercent float64 `json:"ramUsedPercent"`
+
+	RamTotalMb      uint64  `json:"ram_total_mb"`
+	DiskUsedPercent float64 `json:"disk_used_percent"`
+	DiskTotalGb     uint64  `json:"disk_total_gb"`
+
+	// Process and network details
+	Processes          []ProcessModel      `json:"processes"`
+	NetworkConnections []NetworkConnection `json:"networkConnections"`
+
+	// Network speed metrics
+	BytesSentSec uint64    `json:"bytesSentSec"`
+	BytesRecvSec uint64    `json:"bytesRecvSec"`
+	Timestamp    time.Time `json:"timestamp"`
 }
 
 type ProcessModel struct {
 	Pid      int32   `json:"pid"`
 	Name     string  `json:"name"`
-	CpuUsage float64 `json:"cpuUsage"`
+	Cpu      float64 `json:"cpu"`
 	Username string  `json:"username"`
 }
 
 type NetworkConnection struct {
-	Pid           int32  `json:"pid"`
-	ProcessName   string `json:"processName"`
-	LocalAddress  string `json:"localAddress"`
-	LocalPort     uint32 `json:"localPort"`
-	RemoteAddress string `json:"remoteAddress"`
-	RemotePort    uint32 `json:"remotePort"`
-	Status        string `json:"status"`
+	Pid int32 `json:"pid"`
+
+	LocalAddress  string `json:"local_address"`
+	LocalPort     uint32 `json:"local_port"`
+	RemoteAddress string `json:"remote_address"`
+	RemotePort    uint32 `json:"remote_port"`
+	ProcessName   string `json:"process_name"`
+
+	Status string `json:"status"`
 }
 
 type RegistrationRequest struct {
@@ -104,7 +116,7 @@ var lastCheckTime time.Time
 
 func initNetworkStats() {
 	lastCheckTime = time.Now()
-	io, err := net.IOCounters(false)
+	io, err := gnet.IOCounters(false)
 	if err == nil && len(io) > 0 {
 		lastBytesSent = io[0].BytesSent
 		lastBytesRecv = io[0].BytesRecv
@@ -139,6 +151,14 @@ func main() {
 	// Create Kafka producer
 	kafkaConfig := sarama.NewConfig()
 	kafkaConfig.Producer.Return.Successes = true
+
+	// Recommended stability knobs
+	kafkaConfig.Net.DialTimeout = 10 * time.Second
+	kafkaConfig.Net.ReadTimeout = 10 * time.Second
+	kafkaConfig.Net.WriteTimeout = 10 * time.Second
+	kafkaConfig.Producer.Retry.Max = 5
+	kafkaConfig.Producer.Retry.Backoff = 2 * time.Second
+
 	producer, err := sarama.NewSyncProducer([]string{config.KafkaBroker}, kafkaConfig)
 	if err != nil {
 		log.Fatalf("❌ Failed to start Kafka producer: %v", err)
@@ -160,12 +180,13 @@ func main() {
 		jsonBytes, err := json.Marshal(report)
 		if err != nil {
 			log.Println("Error marshalling JSON:", err)
+			time.Sleep(DataInterval)
 			continue
 		}
 
 		msg := &sarama.ProducerMessage{
 			Topic: config.KafkaTopic,
-			Value: sarama.StringEncoder(jsonBytes),
+			Value: sarama.ByteEncoder(jsonBytes),
 		}
 
 		// Add agent metadata as headers if registered
@@ -180,8 +201,13 @@ func main() {
 		if err != nil {
 			log.Printf("❌ Kafka Error: %v", err)
 		} else {
-			fmt.Printf("✅ Sent: [CPU: %.1f%% | Net Upload: %d KB/s | Active Conns: %d]\n",
-				report.CpuUsage, report.BytesSentSec/1024, len(report.Network))
+			fmt.Printf(
+				"✅ Sent: [CPU: %.1f%% | Up: %d KB/s | Down: %d KB/s | Conns: %d]\n",
+				report.CpuUsage,
+				report.BytesSentSec/1024,
+				report.BytesRecvSec/1024,
+				len(report.NetworkConnections),
+			)
 		}
 
 		time.Sleep(DataInterval)
@@ -195,7 +221,7 @@ func main() {
 func loadDefaultConfig() {
 	config = AgentConfig{
 		ServerURL:   getEnv("SENTINEL_SERVER", "http://localhost:8080"),
-		KafkaBroker: getEnv("KAFKA_BROKER", "localhost:9092"),
+		KafkaBroker: getEnv("KAFKA_BROKER", "127.0.0.1:9092"),
 		KafkaTopic:  getEnv("KAFKA_TOPIC", "agent-data"),
 	}
 }
@@ -227,6 +253,12 @@ func loadConfig() bool {
 	}
 	if savedConfig.ServerURL != "" {
 		config.ServerURL = savedConfig.ServerURL
+	}
+	if savedConfig.KafkaBroker != "" {
+		config.KafkaBroker = savedConfig.KafkaBroker
+	}
+	if savedConfig.KafkaTopic != "" {
+		config.KafkaTopic = savedConfig.KafkaTopic
 	}
 
 	return config.AgentID != "" && config.ApiKey != ""
@@ -289,19 +321,24 @@ func registerAgent() error {
 	return nil
 }
 
+// Better local IP discovery (stdlib)
 func getLocalIP() string {
-	addrs, err := net.Interfaces()
+	addrs, err := stdnet.InterfaceAddrs()
 	if err != nil {
 		return "unknown"
 	}
-	for _, iface := range addrs {
-		if len(iface.Addrs) > 0 {
-			for _, addr := range iface.Addrs {
-				if addr.Addr != "" && addr.Addr != "127.0.0.1" {
-					return addr.Addr
-				}
-			}
+	for _, addr := range addrs {
+		// Example: "192.168.1.10/24"
+		ip := addr.String()
+		if ip == "" {
+			continue
 		}
+		// filter loopback (IPv4/IPv6)
+		if ip == "127.0.0.1" || ip == "::1" {
+			continue
+		}
+		// Keep it simple: return first non-loopback
+		return ip
 	}
 	return "unknown"
 }
@@ -366,31 +403,52 @@ func collectMetrics() MetricReport {
 	}
 	vMem, _ := mem.VirtualMemory()
 
-	// 2. Processes (Top 5)
+	ramTotalMb := uint64(0)
+	ramUsedPercent := 0.0
+	if vMem != nil {
+		ramTotalMb = vMem.Total / (1024 * 1024)
+		ramUsedPercent = vMem.UsedPercent
+	}
+
+	// Disk
+	diskUsedPercent := 0.0
+	diskTotalGb := uint64(0)
+
+	// solution to enable disk metrics:
+	// usage, err := disk.Usage(os.Getenv("SystemDrive") + "\\")
+	// if err == nil && usage != nil {
+	// 	diskUsedPercent = usage.UsedPercent
+	// 	diskTotalGb = usage.Total / (1024 * 1024 * 1024)
+	// }
+
+	// Processes (Top 5)
 	procs := getTopProcesses(5)
 
-	// 3. Network (Smart Connections)
+	// Network (Smart Connections)
 	conns := getSmartNetworkConnections(procs)
 
-	// 4. Network Speed Calculation
+	// Network Speed Calculation
 	bytesSentSec, bytesRecvSec := calculateNetworkSpeed()
 
 	return MetricReport{
-		AgentID:        config.AgentID,
-		ApiKey:         config.ApiKey,
-		Hostname:       hostname,
-		CpuUsage:       cpuVal,
-		RamUsedPercent: vMem.UsedPercent,
-		Processes:      procs,
-		Network:        conns,
-		BytesSentSec:   bytesSentSec,
-		BytesRecvSec:   bytesRecvSec,
-		Timestamp:      time.Now(),
+		AgentID:            config.AgentID,
+		ApiKey:             config.ApiKey,
+		Hostname:           hostname,
+		CpuUsage:           cpuVal,
+		RamUsedPercent:     ramUsedPercent,
+		RamTotalMb:         ramTotalMb,
+		DiskUsedPercent:    diskUsedPercent,
+		DiskTotalGb:        diskTotalGb,
+		Processes:          procs,
+		NetworkConnections: conns,
+		BytesSentSec:       bytesSentSec,
+		BytesRecvSec:       bytesRecvSec,
+		Timestamp:          time.Now(),
 	}
 }
 
 func calculateNetworkSpeed() (uint64, uint64) {
-	io, err := net.IOCounters(false)
+	io, err := gnet.IOCounters(false)
 	if err != nil || len(io) == 0 {
 		return 0, 0
 	}
@@ -424,11 +482,12 @@ func getTopProcesses(limit int) []ProcessModel {
 			name, _ := p.Name()
 			user, _ := p.Username()
 			models = append(models, ProcessModel{
-				Pid: p.Pid, Name: name, CpuUsage: cpuP, Username: user,
+				Pid: p.Pid, Name: name, Cpu: cpuP, Username: user,
 			})
 		}
 	}
-	sort.Slice(models, func(i, j int) bool { return models[i].CpuUsage > models[j].CpuUsage })
+
+	sort.Slice(models, func(i, j int) bool { return models[i].Cpu > models[j].Cpu })
 	if len(models) > limit {
 		return models[:limit]
 	}
@@ -436,7 +495,7 @@ func getTopProcesses(limit int) []ProcessModel {
 }
 
 func getSmartNetworkConnections(topProcs []ProcessModel) []NetworkConnection {
-	connections, _ := net.Connections("inet")
+	connections, _ := gnet.Connections("inet")
 	var models []NetworkConnection
 
 	procNames := make(map[int32]string)
@@ -446,7 +505,8 @@ func getSmartNetworkConnections(topProcs []ProcessModel) []NetworkConnection {
 
 	count := 0
 	for _, c := range connections {
-		if c.Status == "ESTABLISHED" && c.Raddr.IP != "127.0.0.1" {
+		// keep only meaningful connections
+		if c.Status == "ESTABLISHED" && c.Raddr.IP != "" && c.Raddr.IP != "127.0.0.1" && c.Raddr.IP != "::1" {
 
 			pName := procNames[c.Pid]
 			if pName == "" {
@@ -464,11 +524,13 @@ func getSmartNetworkConnections(topProcs []ProcessModel) []NetworkConnection {
 				RemotePort:    c.Raddr.Port,
 				Status:        c.Status,
 			})
+
 			count++
 			if count >= 8 {
 				break
 			}
 		}
 	}
+
 	return models
 }
