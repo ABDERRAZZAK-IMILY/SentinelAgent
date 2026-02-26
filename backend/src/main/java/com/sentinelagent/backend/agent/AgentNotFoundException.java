@@ -2,9 +2,7 @@ package com.sentinelagent.backend.agent;
 
 import com.sentinelagent.backend.shared.exception.DomainException;
 
-/**
- * Exception thrown when an Agent is not found
- */
+
 public class AgentNotFoundException extends DomainException {
 
     public AgentNotFoundException(String agentId) {
