@@ -10,10 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-/**
- * MongoDB Document for Agent persistence.
- * Maps to the 'agents' collection.
- */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
