@@ -6,15 +6,10 @@ import com.sentinelagent.backend.agent.internal.domain.AgentStatus;
 import com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentDocument;
 import org.springframework.stereotype.Component;
 
-/**
- * Mapper between Agent domain entity and AgentDocument persistence entity.
- */
+
 @Component
 public class AgentMapper {
 
-    /**
-     * Convert domain Agent to MongoDB AgentDocument
-     */
     public AgentDocument toDocument(Agent agent) {
         if (agent == null)
             return null;
@@ -32,9 +27,6 @@ public class AgentMapper {
                 .build();
     }
 
-    /**
-     * Convert MongoDB AgentDocument to domain Agent
-     */
     public Agent toDomain(AgentDocument document) {
         if (document == null)
             return null;
