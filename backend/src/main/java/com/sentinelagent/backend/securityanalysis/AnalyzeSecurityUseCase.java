@@ -1,5 +1,6 @@
 package com.sentinelagent.backend.securityanalysis;
 
+import com.sentinelagent.backend.securityanalysis.domain.AnalysisResult;
 import com.sentinelagent.backend.telemetry.TelemetryReceivedEvent;
 import com.sentinelagent.backend.telemetry.MetricReport;
 import com.sentinelagent.backend.telemetry.NetworkConnection;
@@ -7,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,7 +24,7 @@ public class AnalyzeSecurityUseCase {
     private final RagSecurityUseCase ragSecurityUseCase;
     private final NetworkIntelligenceUseCase networkIntelligence;
 
-    public String execute(MetricReport report) {
+    public AnalysisResult execute(MetricReport report) {
         String networkContext = enrichNetworkData(report.getNetworkConnections());
 
         double uploadMB = report.getUploadSpeedMbps();
@@ -33,51 +35,64 @@ public class AnalyzeSecurityUseCase {
         if (ragContext == null)
             ragContext = "No specific MITRE data found.";
 
+
+        var outputConverter = new BeanOutputConverter<>(AnalysisResult.class);
+
+
         String promptText = """
-                You are an advanced Cybersecurity AI Agent powered by DeepSeek.
-                Your task is to analyze system metrics and detect potential threats (Ransomware, Spyware, C2 Communication).
-
-                --- INTELLIGENCE CONTEXT ---
-                Knowledge Base (MITRE ATT&CK):
-                {rag_context}
-
-                Network Intelligence (GeoIP & Reputation):
-                {network_context}
-
-                --- LIVE SYSTEM METRICS ---
-                - CPU Usage: {cpu}%
-                - RAM Usage: {ram}%
-                - Network Upload Speed: {upload} MB/s
-                - Network Download Speed: {download} MB/s
-                - Active Processes: {processes}
-
-                --- INSTRUCTIONS ---
-                1. Analyze 'Network Intelligence'. If a known malicious IP is found, FLAGGED immediately.
-                2. Check if 'Network Upload Speed' is high while CPU is high (Potential Data Theft).
-                3. Look at the process names in the network connections. Is a weird process connecting to the internet?
-                4. Output a concise JSON alert containing the following keys: risk_level, threat_type, description, recommendation.
-                """;
+               You are an advanced Cybersecurity AI Agent specialized in real-time threat detection.
+               Your mission is to analyze system telemetry and intelligence context to identify potential security breaches such as Ransomware, Spyware, or C2 Communication.
+    
+               --- INTELLIGENCE CONTEXT (Threat Intel & RAG) ---
+               Knowledge Base (MITRE ATT&CK): 
+               {rag_context}
+    
+               Network Intelligence (GeoIP & Reputation): 
+               {network_context}
+    
+               --- LIVE SYSTEM TELEMETRY ---
+               - Hostname: {hostname}
+               - CPU Usage: {cpu}%
+               - RAM Usage: {ram}%
+               - Network Upload Speed: {upload} MB/s
+               - Network Download Speed: {download} MB/s
+               - Active Processes: {processes}
+    
+    --- ANALYSIS INSTRUCTIONS ---
+    1. REPUTATION CHECK: Scan the 'Network Intelligence' for any malicious IPs. If found, elevate risk immediately.
+    2. ANOMALY DETECTION: High upload speeds (Exfiltration) combined with high CPU (Encryption/Hashing) are primary indicators of Ransomware or Data Theft.
+    3. PROCESS SCRUTINY: Check process names in network connections. Flag unauthorized binaries communicating with external IPs.
+    4. RISK DETERMINATION: Classify the risk as SAFE, LOW, MEDIUM, HIGH, or CRITICAL.
+    
+    --- OUTPUT REQUIREMENTS ---
+    {format}
+    
+    STRICT RULE: Return ONLY the raw JSON object. Do NOT wrap it in markdown code blocks (like ```json) and do not provide any text explanation outside the JSON.
+    """;
 
         PromptTemplate template = new PromptTemplate(promptText);
 
         Map<String, Object> params = Map.of(
                 "rag_context", ragContext,
                 "network_context", networkContext,
+                "hostname", report.getHostname() != null ? report.getHostname() : "Unknown-Host",
                 "cpu", report.getCpuUsage(),
                 "ram", report.getRamUsedPercent(),
+                "format" , outputConverter.getFormat(),
                 "upload", String.format("%.2f", uploadMB),
                 "download", String.format("%.2f", downloadMB),
                 "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes");
 
-        Prompt prompt = template.create(params);
-        return chatModel.call(prompt).getResult().getOutput().getText();
+        String response = chatModel.call(template.create(params)).getResult().getOutput().getText();
+        return outputConverter.convert(response);
+
+//        Prompt prompt = template.create(params);
+//        return chatModel.call(prompt).getResult().getOutput().getText();
     }
 
-    /**
-     * Execute security analysis from a TelemetryReceivedEvent.
-     * Reconstructs the minimal MetricReport needed for AI analysis.
-     */
-    public String executeFromEvent(TelemetryReceivedEvent event) {
+
+
+    public AnalysisResult executeFromEvent(TelemetryReceivedEvent event) {
         MetricReport report = MetricReport.builder()
                 .agentId(event.agentId())
                 .hostname(event.hostname())
@@ -92,20 +107,40 @@ public class AnalyzeSecurityUseCase {
                                 .cpuUsage(p.cpuUsage())
                                 .username(p.username())
                                 .build())
-                        .collect(Collectors.toList()) : List.of())
-                .networkConnections(event.networkConnections() != null ? event.networkConnections().stream()
-                        .map(n -> NetworkConnection.builder()
-                                .pid(n.pid())
-                                .processName(n.processName())
-                                .remoteAddress(n.remoteAddress())
-                                .remotePort(n.remotePort())
-                                .status(n.status())
-                                .build())
-                        .collect(Collectors.toList()) : List.of())
+                        .collect(java.util.stream.Collectors.toList()) : java.util.List.of())
                 .build();
 
         return execute(report);
     }
+//    public AnalysisResult executeFromEvent(TelemetryReceivedEvent event) {
+//        MetricReport report = MetricReport.builder()
+//                .agentId(event.agentId())
+//                .hostname(event.hostname())
+//                .cpuUsage(event.cpuUsage())
+//                .ramUsedPercent(event.ramUsedPercent())
+//                .bytesSentSec(event.bytesSentSec())
+//                .bytesRecvSec(event.bytesRecvSec())
+//                .processes(event.processes() != null ? event.processes().stream()
+//                        .map(p -> com.sentinelagent.backend.telemetry.Process.builder()
+//                                .pid(p.pid())
+//                                .name(p.name())
+//                                .cpuUsage(p.cpuUsage())
+//                                .username(p.username())
+//                                .build())
+//                        .collect(Collectors.toList()) : List.of())
+//                .networkConnections(event.networkConnections() != null ? event.networkConnections().stream()
+//                        .map(n -> NetworkConnection.builder()
+//                                .pid(n.pid())
+//                                .processName(n.processName())
+//                                .remoteAddress(n.remoteAddress())
+//                                .remotePort(n.remotePort())
+//                                .status(n.status())
+//                                .build())
+//                        .collect(Collectors.toList()) : List.of())
+//                .build();
+//
+//        return execute(report);
+//    }
 
     private String enrichNetworkData(List<NetworkConnection> connections) {
         if (connections == null || connections.isEmpty()) {
