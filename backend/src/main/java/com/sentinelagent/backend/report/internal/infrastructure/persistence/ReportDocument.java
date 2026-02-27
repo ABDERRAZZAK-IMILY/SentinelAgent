@@ -25,6 +25,7 @@ public class ReportDocument {
 
     private String reportType;
     private String contentUrl;
+    private String aiSummary;
 
     private LocalDateTime generatedAt;
     private LocalDateTime fromDate;
