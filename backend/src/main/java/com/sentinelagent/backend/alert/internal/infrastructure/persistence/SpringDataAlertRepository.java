@@ -12,4 +12,7 @@ public interface SpringDataAlertRepository extends MongoRepository<AlertDocument
     List<AlertDocument> findByStatus(String status);
 
     List<AlertDocument> findBySeverity(String severity);
+
+        List<AlertDocument> findBySourceAgentId(String sourceAgentId);
+
 }
