@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @RequestMapping("/api/v1/agents")
 @RequiredArgsConstructor
@@ -18,7 +17,6 @@ public class AgentController {
     private final RegisterAgentUseCase registerAgentUseCase;
     private final ProcessHeartbeatUseCase processHeartbeatUseCase;
     private final GetAgentsUseCase getAgentsUseCase;
-
 
     @PostMapping("/register")
     public ResponseEntity<AgentRegistrationResponse> registerAgent(
@@ -44,12 +42,41 @@ public class AgentController {
     public ResponseEntity<AgentDetailsDto> getAgentById(@PathVariable String agentId) {
         return ResponseEntity.ok(getAgentsUseCase.getById(agentId));
     }
+
     @GetMapping("/status/{status}")
     public ResponseEntity<List<AgentDetailsDto>> getAgentsByStatus(@PathVariable String status) {
         return ResponseEntity.ok(getAgentsUseCase.getAgentsByStatus(status));
     }
+
     @GetMapping("/stats")
     public ResponseEntity<GetAgentsUseCase.AgentStatsDto> getStats() {
         return ResponseEntity.ok(getAgentsUseCase.getStats());
+    }
+
+    @PostMapping("/{agentId}/commands")
+    public ResponseEntity<com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument> sendCommand(
+            @PathVariable String agentId,
+            @RequestBody java.util.Map<String, String> payload,
+            @org.springframework.beans.factory.annotation.Autowired com.sentinelagent.backend.agent.internal.infrastructure.persistence.SpringDataAgentCommandRepository commandRepository) {
+
+        String command = payload.get("command");
+        String parameters = payload.getOrDefault("parameters", "{}");
+
+        var doc = com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument.builder()
+                .agentId(agentId)
+                .command(command)
+                .parameters(parameters)
+                .status("PENDING")
+                .issuedAt(java.time.LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.ok(commandRepository.save(doc));
+    }
+
+    @GetMapping("/{agentId}/commands/history")
+    public ResponseEntity<List<com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument>> getCommandHistory(
+            @PathVariable String agentId,
+            @org.springframework.beans.factory.annotation.Autowired com.sentinelagent.backend.agent.internal.infrastructure.persistence.SpringDataAgentCommandRepository commandRepository) {
+        return ResponseEntity.ok(commandRepository.findByAgentIdOrderByIssuedAtDesc(agentId));
     }
 }
