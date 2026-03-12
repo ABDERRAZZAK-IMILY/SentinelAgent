@@ -17,7 +17,15 @@ public class SetupAdminUseCase {
     private final PasswordEncoder passwordEncoder;
 
     public SetupResult execute() {
-        if (userRepository.findByUsername("admin").isPresent()) {
+        var existingAdmin = userRepository.findByUsername("admin");
+        if (existingAdmin.isPresent()) {
+            String storedPassword = existingAdmin.get().getPassword();
+            if (storedPassword == null || !storedPassword.startsWith("$2")) {
+                User admin = existingAdmin.get();
+                admin.setPassword(passwordEncoder.encode("admin123"));
+                userRepository.save(admin);
+                return SetupResult.success("Admin password re-encoded successfully");
+            }
             return SetupResult.failure("Admin already exists");
         }
 
