@@ -1,0 +1,98 @@
+<section class="grid gap-6 xl:grid-cols-12">
+  <!-- Control Panel Sidebar -->
+  <aside class="space-y-4 xl:col-span-3">
+    <div class="sentinel-panel card">
+      <div class="card-body">
+        <h2 class="sentinel-title text-3xl">Control Panel</h2>
+        <ul class="menu bg-base-200 rounded-box">
+          @for (entry of quickLinks; track entry.label) {
+            <li>
+              <a href="#">
+                <span class="material-symbols-outlined">{{ entry.icon }}</span>
+                {{ entry.label }}
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+    <div class="alert alert-error">
+      <span class="material-symbols-outlined">warning</span>
+      <div>
+        <h3 class="font-bold uppercase">Emergency Controls</h3>
+        <p class="text-xs">Force reboot and overclock procedures are armed.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="space-y-6 xl:col-span-6">
+    <article class="sentinel-panel card overflow-hidden">
+      <div class="card-body gap-4">
+        <p class="text-xs uppercase tracking-[0.25em] text-primary/70">Fleet Intelligence</p>
+        <h1 class="sentinel-title text-6xl">Global Sync</h1>
+        <p class="max-w-2xl text-sm text-base-content/70">
+          Real-time aggregated telemetry from all active sentinel agents across the secured perimeter.
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+          @if (loading) {
+            <div class="col-span-2 py-4 flex items-center justify-center text-primary/50 gap-2"><span class="material-symbols-outlined animate-spin">cyclone</span> SYNCING...</div>
+          } @else {
+            @for (summary of unitSummary; track summary.label) {
+              <app-metric-card [label]="summary.label" [value]="summary.value" [icon]="summary.icon" />
+            }
+          }
+        </div>
+      </div>
+    </article>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      @if (loading) {
+        <div class="col-span-4 py-8 flex items-center justify-center text-primary/50 gap-2"><span class="material-symbols-outlined animate-spin">cyclone</span> GATHERING TELEMETRY...</div>
+      } @else {
+        @for (metric of performance; track metric.label) {
+          <app-metric-card
+            [label]="metric.label"
+            [value]="metric.value"
+            [icon]="metric.icon"
+            [hint]="metric.hint" />
+        }
+      }
+    </div>
+  </div>
+
+  <!-- Action History Sidebar -->
+  <aside class="sentinel-panel card xl:col-span-3">
+    <div class="card-body">
+      <h2 class="sentinel-title text-3xl">Action History</h2>
+      <div class="space-y-3">
+        @if (loading) {
+          <div class="py-12 flex flex-col items-center justify-center text-primary/50 gap-2 text-xs font-bold uppercase tracking-widest">
+            <span class="material-symbols-outlined animate-spin text-3xl">cyclone</span> 
+            Decrypting Logs...
+          </div>
+        } @else if (logs.length === 0) {
+          <div class="py-12 flex flex-col items-center justify-center text-slate-500 gap-2 text-xs font-bold uppercase tracking-widest text-center">
+            <span class="material-symbols-outlined text-4xl mb-2">check_circle</span> 
+            No recent threats detected.<br/>Perimeter secured.
+          </div>
+        } @else {
+          @for (log of logs; track log.timestamp + log.category) {
+            <article
+              class="rounded-xl border border-base-content/20 p-3"
+              [class.border-primary]="log.highlight"
+              [class.bg-primary]="log.highlight"
+              [class.bg-opacity-10]="log.highlight">
+              <p class="text-sm font-medium">{{ log.message }}</p>
+              <p class="mt-2 text-[11px] uppercase tracking-widest text-primary/70">
+                {{ log.timestamp }} • {{ log.category }}
+              </p>
+            </article>
+          }
+        }
+      </div>
+    </div>
+  </aside>
+</section>
+
+<app-footer leftText="Sentinel Intelligence Systems © 2026" rightText="Build 88-Alpha" />

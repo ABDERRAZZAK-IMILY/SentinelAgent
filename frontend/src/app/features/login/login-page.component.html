@@ -1,0 +1,92 @@
+<section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-100 to-base-300 p-4">
+  <div class="w-full max-w-md">
+    <!-- Logo Area -->
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center justify-center size-20 rounded-full bg-primary/20 border-2 border-primary mb-4">
+        <span class="material-symbols-outlined text-5xl text-primary">shield_person</span>
+      </div>
+      <h1 class="font-comic text-5xl text-primary tracking-widest drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]">SENTINEL</h1>
+      <p class="text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mt-2">Neural Authentication Gate</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="bg-[#1b2a3d] p-8 rounded-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      @if (errorMessage) {
+        <div class="mb-6 p-4 bg-red-500/20 border-2 border-red-500 rounded-lg text-red-400 text-sm font-bold flex items-center gap-3">
+          <span class="material-symbols-outlined text-red-500">error</span>
+          {{ errorMessage }}
+        </div>
+      }
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="space-y-6">
+          <!-- Username -->
+          <div class="space-y-2">
+            <label class="text-xs font-black uppercase tracking-widest text-primary/80" for="username">
+              Operative Code
+            </label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary/50">person</span>
+              <input
+                id="username"
+                class="w-full bg-black/30 border-2 border-black rounded-lg pl-12 pr-4 py-3 text-white font-bold focus:outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                placeholder="Enter your callsign..."
+                type="text"
+                [(ngModel)]="username"
+                name="username"
+                autocomplete="username" />
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="space-y-2">
+            <label class="text-xs font-black uppercase tracking-widest text-primary/80" for="password">
+              Access Key
+            </label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary/50">lock</span>
+              <input
+                id="password"
+                class="w-full bg-black/30 border-2 border-black rounded-lg pl-12 pr-4 py-3 text-white font-bold focus:outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                placeholder="Enter passphrase..."
+                type="password"
+                [(ngModel)]="password"
+                name="password"
+                autocomplete="current-password" />
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button
+            class="w-full bg-primary text-black py-4 rounded-lg border-4 border-black font-comic text-2xl tracking-widest uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            type="submit"
+            [disabled]="loading">
+            @if (loading) {
+              <span class="inline-flex items-center gap-2">
+                <span class="material-symbols-outlined animate-spin">cyclone</span>
+                AUTHENTICATING...
+              </span>
+            } @else {
+              INITIALIZE
+            }
+          </button>
+        </div>
+      </form>
+
+      <div class="mt-6 flex justify-center gap-6 opacity-40">
+        <div class="flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm text-primary">encrypted</span>
+          <span class="text-[9px] font-bold text-primary uppercase">AES-256</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm text-primary">vpn_lock</span>
+          <span class="text-[9px] font-bold text-primary uppercase">Secure</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-center mt-6 text-slate-600 text-xs font-bold uppercase tracking-wider">
+      Sentinel Intelligence Systems © 2026
+    </p>
+  </div>
+</section>

@@ -1,27 +1,54 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './guards/auth.guard';
+import { ShellComponent } from './core/layout/shell.component';
+import { authGuard } from './core/guards/auth.guard';
 
-export const routes: Routes = [
-    { 
-        path: 'login', 
-        loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent),
-        canActivate: [guestGuard]
-    },
-    { 
-        path: 'enroll', 
-        loadComponent: () => import('./pages/enroll/enroll.component').then(m => m.EnrollComponent),
-        canActivate: [guestGuard]
-    },
-    { 
-        path: 'iris-login', 
-        loadComponent: () => import('./pages/iris-login-page/iris-login-page.component').then(m => m.IrisLoginPageComponent),
-        canActivate: [guestGuard]
-    },
-    { 
-        path: 'dashboard', 
-        loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
-        canActivate: [authGuard]
-    },
-    { path: '', redirectTo: '/login', pathMatch: 'full' },
-    { path: '**', redirectTo: '/login' }
+export const appRoutes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () => import('./features/login/login-page.component').then((m) => m.LoginPageComponent),
+  },
+  {
+    path: '',
+    component: ShellComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'overview',
+      },
+      {
+        path: 'overview',
+        loadComponent: () => import('./features/overview/overview-page.component').then((m) => m.OverviewPageComponent),
+      },
+      {
+        path: 'chat',
+        loadComponent: () => import('./features/chat/chat-page.component').then((m) => m.ChatPageComponent),
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./features/reports/reports-page.component').then((m) => m.ReportsPageComponent),
+      },
+      {
+        path: 'system',
+        loadComponent: () => import('./features/system/system-page.component').then((m) => m.SystemPageComponent),
+      },
+      {
+        path: 'squad',
+        loadComponent: () => import('./features/squad/squad-page.component').then((m) => m.SquadPageComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./features/settings/settings-page.component').then((m) => m.SettingsPageComponent),
+      },
+      {
+        path: 'threats',
+        loadComponent: () => import('./features/threats/threats-page.component').then((m) => m.ThreatsPageComponent),
+      },
+    ],
+  },
+  {
+    path: '**',
+    redirectTo: 'overview',
+  },
 ];

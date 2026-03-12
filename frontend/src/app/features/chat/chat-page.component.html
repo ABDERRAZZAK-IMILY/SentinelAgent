@@ -1,0 +1,109 @@
+<section class="flex flex-col h-[calc(100vh-5rem)] relative overflow-hidden">
+  <!-- Header -->
+  <header class="flex items-center justify-between px-8 py-4 bg-background-dark border-b-4 border-primary">
+    <div class="flex items-center gap-4">
+      <span class="material-symbols-outlined text-primary text-3xl">psychology</span>
+      <h2 class="font-comic text-4xl text-primary tracking-widest drop-shadow-[2px_2px_0px_#ff00ff]">BRAIN-BOT CHAT</h2>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex gap-2">
+        <button class="size-10 flex items-center justify-center bg-accent-pink rounded-lg neo-brutalism-btn border-2 border-black">
+          <span class="material-symbols-outlined text-black font-bold">terminal</span>
+        </button>
+        <button class="size-10 flex items-center justify-center bg-primary rounded-lg neo-brutalism-btn border-2 border-black">
+          <span class="material-symbols-outlined text-black font-bold">query_stats</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Chat Area -->
+  <div class="flex-1 overflow-y-auto p-8 space-y-8 bg-navy-deep">
+    @for (message of messages; track message.timestamp + message.author) {
+      @if (message.author === 'ai') {
+        <!-- AI Message -->
+        <div class="flex items-end gap-6 group">
+          <div class="relative shrink-0">
+            <div class="size-16 bg-primary rounded-full neo-brutalism-card flex items-center justify-center overflow-hidden">
+              <span class="material-symbols-outlined text-4xl text-black">psychology</span>
+            </div>
+            <div class="absolute -top-2 -right-2 size-6 bg-accent-pink rounded-full flex items-center justify-center border-2 border-black">
+              <span class="material-symbols-outlined text-[14px] text-black font-bold">electric_bolt</span>
+            </div>
+          </div>
+          <div class="relative max-w-lg">
+            <div class="bg-primary text-background-dark font-bold p-5 rounded-t-2xl rounded-br-2xl border-4 border-black relative comic-bubble">
+              <p class="text-lg leading-tight uppercase">{{ message.body }}</p>
+            </div>
+            <p class="text-[10px] font-bold text-primary/50 mt-2 ml-1 uppercase tracking-widest">SENTINEL_AI • {{ message.timestamp | uppercase }}</p>
+          </div>
+        </div>
+      } @else {
+        <!-- User Message -->
+        <div class="flex items-end gap-6 flex-row-reverse">
+          <div class="size-16 bg-slate-800 rounded-full neo-brutalism-card border-primary overflow-hidden shrink-0 flex items-center justify-center">
+            <span class="material-symbols-outlined text-4xl text-primary">person</span>
+          </div>
+          <div class="max-w-lg text-right">
+            <div class="bg-background-dark text-slate-100 font-medium p-5 rounded-t-2xl rounded-bl-2xl border-4 border-primary">
+              <p class="text-lg leading-tight">{{ message.body }}</p>
+            </div>
+            <p class="text-[10px] font-bold text-primary/50 mt-2 mr-1 uppercase tracking-widest">AGENT_01 • {{ message.timestamp | uppercase }}</p>
+          </div>
+        </div>
+      }
+    }
+
+    @if (loading) {
+    <!-- Typing Indicator -->
+    <div class="flex items-center gap-4 py-4 px-6 bg-primary/5 border-2 border-dashed border-primary/30 rounded-xl max-w-sm">
+      <span class="material-symbols-outlined text-primary animate-spin">cyclone</span>
+      <span class="font-comic text-primary tracking-widest">DECRYPTING UPLINK...</span>
+    </div>
+    }
+  </div>
+
+  <!-- Input Area -->
+  <div class="p-8 bg-background-dark border-t-4 border-primary">
+    <form class="max-w-4xl mx-auto flex gap-4" (submit)="sendMessage(); $event.preventDefault()">
+      <div class="flex-1 relative">
+        <input
+          class="w-full bg-navy-deep border-4 border-primary rounded-xl px-6 py-4 text-primary placeholder:text-primary/30 font-bold focus:ring-0 focus:outline-none text-lg"
+          placeholder="ENTER MISSION COMMAND..."
+          type="text"
+          [(ngModel)]="draft"
+          name="draft"
+          aria-label="Mission command" />
+        <div class="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+          <button class="text-primary/50 hover:text-primary" type="button">
+            <span class="material-symbols-outlined">attach_file</span>
+          </button>
+          <button class="text-primary/50 hover:text-primary" type="button">
+            <span class="material-symbols-outlined">mic</span>
+          </button>
+        </div>
+      </div>
+      <button class="bg-accent-pink text-black font-comic text-2xl px-10 py-4 rounded-xl border-4 border-black neo-brutalism-btn hover:bg-accent-pink/90 transition-all uppercase tracking-tighter" type="submit">
+        SEND!
+      </button>
+    </form>
+    <div class="flex justify-center mt-4 gap-8">
+      <div class="flex items-center gap-2 opacity-50">
+        <span class="material-symbols-outlined text-sm text-primary">data_usage</span>
+        <span class="text-[10px] font-bold text-primary uppercase">Encrypted Line</span>
+      </div>
+      <div class="flex items-center gap-2 opacity-50">
+        <span class="material-symbols-outlined text-sm text-primary">memory</span>
+        <span class="text-[10px] font-bold text-primary uppercase">Neural Sync Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decorative Elements -->
+  <div class="absolute top-24 right-10 pointer-events-none opacity-10">
+    <span class="material-symbols-outlined text-[120px] text-primary rotate-12">rocket_launch</span>
+  </div>
+  <div class="absolute bottom-40 left-10 pointer-events-none opacity-10">
+    <span class="material-symbols-outlined text-[80px] text-accent-pink -rotate-12">shield_with_heart</span>
+  </div>
+</section>
