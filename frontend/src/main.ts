@@ -1,6 +1,15 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { appConfig } from './app/app.config';
-import { App } from './app/app';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { AppComponent } from './app/app.component';
+import { appRoutes } from './app/app.routes';
+import { authInterceptor } from './app/core/interceptors/auth.interceptor';
 
-bootstrapApplication(App, appConfig)
-  .catch((err) => console.error(err));
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideAnimations(),
+    provideHttpClient(withInterceptors([authInterceptor])),
+    provideRouter(appRoutes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
+  ],
+}).catch((err) => console.error(err));
