@@ -99,6 +99,7 @@ export interface AiStatus {
 
 export interface ChatRequest {
   message: string;
+  agentId?: string | null;
 }
 
 export interface ChatResponse {
