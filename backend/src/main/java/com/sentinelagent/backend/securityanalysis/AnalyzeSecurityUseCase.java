@@ -112,36 +112,6 @@ public class AnalyzeSecurityUseCase {
 
         return execute(report);
     }
-//    public AnalysisResult executeFromEvent(TelemetryReceivedEvent event) {
-//        MetricReport report = MetricReport.builder()
-//                .agentId(event.agentId())
-//                .hostname(event.hostname())
-//                .cpuUsage(event.cpuUsage())
-//                .ramUsedPercent(event.ramUsedPercent())
-//                .bytesSentSec(event.bytesSentSec())
-//                .bytesRecvSec(event.bytesRecvSec())
-//                .processes(event.processes() != null ? event.processes().stream()
-//                        .map(p -> com.sentinelagent.backend.telemetry.Process.builder()
-//                                .pid(p.pid())
-//                                .name(p.name())
-//                                .cpuUsage(p.cpuUsage())
-//                                .username(p.username())
-//                                .build())
-//                        .collect(Collectors.toList()) : List.of())
-//                .networkConnections(event.networkConnections() != null ? event.networkConnections().stream()
-//                        .map(n -> NetworkConnection.builder()
-//                                .pid(n.pid())
-//                                .processName(n.processName())
-//                                .remoteAddress(n.remoteAddress())
-//                                .remotePort(n.remotePort())
-//                                .status(n.status())
-//                                .build())
-//                        .collect(Collectors.toList()) : List.of())
-//                .build();
-//
-//        return execute(report);
-//    }
-
     private String enrichNetworkData(List<NetworkConnection> connections) {
         if (connections == null || connections.isEmpty()) {
             return "No active network connections.";
