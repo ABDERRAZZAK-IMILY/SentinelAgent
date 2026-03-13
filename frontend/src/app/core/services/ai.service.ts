@@ -18,7 +18,8 @@ export class AiService {
     return this.http.post<{ message: string; jobId: string }>(`${this.baseUrl}/train`, {});
   }
 
-  chat(message: string): Observable<ChatResponse> {
-    return this.http.post<ChatResponse>(`${this.baseUrl}/chat`, { message });
+  chat(message: string, agentId: string | null = null): Observable<ChatResponse> {
+    const payload: ChatRequest = { message, agentId };
+    return this.http.post<ChatResponse>(`${this.baseUrl}/chat`, payload);
   }
 }
