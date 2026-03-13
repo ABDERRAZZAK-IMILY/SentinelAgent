@@ -7,6 +7,8 @@ import java.util.List;
 
 @Repository
 public interface SpringDataReportRepository extends MongoRepository<ReportDocument, String> {
+    List<ReportDocument> findAllByOrderByGeneratedAtDesc();
+
     List<ReportDocument> findByAgentIdOrderByGeneratedAtDesc(String agentId);
 
     List<ReportDocument> findByReportTypeOrderByGeneratedAtDesc(String reportType);
