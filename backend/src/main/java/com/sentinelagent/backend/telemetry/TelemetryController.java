@@ -1,7 +1,5 @@
 package com.sentinelagent.backend.telemetry;
 
-import com.sentinelagent.backend.telemetry.internal.infrastructure.persistence.MetricReportDocument;
-import com.sentinelagent.backend.telemetry.internal.infrastructure.persistence.SpringDataMetricReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,19 +12,37 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TelemetryController {
 
-    private final SpringDataMetricReportRepository metricReportRepository;
+    private final TelemetryQueryService telemetryQueryService;
 
     @GetMapping("/agents/{agentId}/history")
-    public ResponseEntity<List<MetricReportDocument>> getHistoricalMetrics(
+    public ResponseEntity<List<TelemetryResponse>> getHistoricalMetrics(
             @PathVariable String agentId,
             @RequestParam(defaultValue = "1") int hoursBack) {
 
         LocalDateTime end = LocalDateTime.now();
         LocalDateTime start = end.minusHours(hoursBack);
 
-        List<MetricReportDocument> history = metricReportRepository
-                .findByAgentIdAndReceivedAtBetweenOrderByReceivedAtAsc(agentId, start, end);
+        List<TelemetryResponse> history = telemetryQueryService.getHistory(agentId, start, end);
 
         return ResponseEntity.ok(history);
+    }
+
+    @GetMapping("/agents/{agentId}/latest")
+    public ResponseEntity<TelemetryResponse> getLatestMetrics(@PathVariable String agentId) {
+        return telemetryQueryService.getLatest(agentId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/agents/{agentId}/ai-summary")
+    public ResponseEntity<TelemetryAiSummaryResponse> getAiSummary(
+            @PathVariable String agentId,
+            @RequestParam(defaultValue = "6") int hoursBack) {
+
+        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime start = end.minusHours(Math.max(hoursBack, 1));
+
+        TelemetryAiSummaryResponse summary = telemetryQueryService.getAiSummary(agentId, start, end);
+        return ResponseEntity.ok(summary);
     }
 }
