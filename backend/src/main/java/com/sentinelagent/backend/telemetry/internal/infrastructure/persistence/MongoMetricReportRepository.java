@@ -3,8 +3,6 @@ package com.sentinelagent.backend.telemetry.internal.infrastructure.persistence;
 import com.sentinelagent.backend.telemetry.MetricReport;
 import com.sentinelagent.backend.telemetry.MetricReportId;
 import com.sentinelagent.backend.telemetry.internal.domain.MetricReportRepository;
-import com.sentinelagent.backend.telemetry.internal.infrastructure.persistence.MetricReportDocument;
-import com.sentinelagent.backend.telemetry.internal.infrastructure.persistence.MetricReportMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -70,5 +68,18 @@ public class MongoMetricReportRepository implements MetricReportRepository {
     @Override
     public long count() {
         return springDataRepository.count();
+    }
+
+    @Override
+    public List<MetricReport> findByAgentIdBetween(String agentId, LocalDateTime start, LocalDateTime end) {
+        return springDataRepository.findByAgentIdAndReceivedAtBetweenOrderByReceivedAtAsc(agentId, start, end).stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<MetricReport> findLatestByAgentId(String agentId) {
+        return springDataRepository.findTopByAgentIdOrderByReceivedAtDesc(agentId)
+                .map(mapper::toDomain);
     }
 }
