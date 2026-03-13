@@ -25,4 +25,8 @@ public interface MetricReportRepository {
     void deleteById(MetricReportId id);
 
     long count();
+
+    List<MetricReport> findByAgentIdBetween(String agentId, LocalDateTime start, LocalDateTime end);
+
+    Optional<MetricReport> findLatestByAgentId(String agentId);
 }
