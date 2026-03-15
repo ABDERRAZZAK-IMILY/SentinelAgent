@@ -5,8 +5,8 @@ import com.sentinelagent.backend.telemetry.TelemetryReceivedEvent;
 import com.sentinelagent.backend.telemetry.MetricReport;
 import com.sentinelagent.backend.telemetry.NetworkConnection;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Service;
@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnalyzeSecurityUseCase {
@@ -83,11 +84,29 @@ public class AnalyzeSecurityUseCase {
                 "download", String.format("%.2f", downloadMB),
                 "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes");
 
-        String response = chatModel.call(template.create(params)).getResult().getOutput().getText();
-        return outputConverter.convert(response);
+        try {
+            String response = chatModel.call(template.create(params)).getResult().getOutput().getText();
+            log.debug("[AnalyzeSecurityUseCase] Raw AI response: {}", response);
+            String cleaned = cleanJsonResponse(response);
+            log.debug("[AnalyzeSecurityUseCase] Cleaned AI response: {}", cleaned);
+            return outputConverter.convert(cleaned);
+        } catch (Exception ex) {
+            log.error("[AnalyzeSecurityUseCase] Failed to convert AI response", ex);
+            throw ex;
+        }
 
 //        Prompt prompt = template.create(params);
 //        return chatModel.call(prompt).getResult().getOutput().getText();
+    }
+
+    private String cleanJsonResponse(String response) {
+        if (response == null) {
+            return "{}";
+        }
+        return response.trim()
+                .replace("```json", "")
+                .replace("```", "")
+                .trim();
     }
 
 
