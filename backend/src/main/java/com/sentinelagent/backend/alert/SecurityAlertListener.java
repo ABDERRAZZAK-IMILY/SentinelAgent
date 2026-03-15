@@ -5,6 +5,7 @@ import com.sentinelagent.backend.alert.internal.infrastructure.persistence.Sprin
 import com.sentinelagent.backend.securityanalysis.SecurityAlertGeneratedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,7 @@ public class SecurityAlertListener {
     private final SpringDataAlertRepository alertRepository;
 
     @ApplicationModuleListener
+    @EventListener // fallback to plain Spring events to ensure handling
     public void onSecurityAlertGenerated(SecurityAlertGeneratedEvent event) {
         log.info("🔴 Received SecurityAlertGeneratedEvent for agent: {}", event.agentId());
 
