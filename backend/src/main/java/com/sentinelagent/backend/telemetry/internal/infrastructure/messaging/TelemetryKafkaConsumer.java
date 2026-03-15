@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +26,7 @@ public class TelemetryKafkaConsumer {
     private final ApplicationEventPublisher eventPublisher;
 
     @KafkaListener(topics = "agent-data", groupId = "sentinel-consumer-group", containerFactory = "kafkaListenerContainerFactory")
+    @Transactional
     public void onMessage(TelemetryKafkaMessage message) {
 
         log.info(" [Kafka] Receiving new data from Agent ID: {}", message.getAgentId());

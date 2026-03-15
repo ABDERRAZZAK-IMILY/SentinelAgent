@@ -45,6 +45,10 @@ export const appRoutes: Routes = [
         path: 'threats',
         loadComponent: () => import('./features/threats/threats-page.component').then((m) => m.ThreatsPageComponent),
       },
+      {
+        path: 'telemetry',
+        loadComponent: () => import('./features/telemetry/telemetry-page.component').then((m) => m.TelemetryPageComponent),
+      },
     ],
   },
   {

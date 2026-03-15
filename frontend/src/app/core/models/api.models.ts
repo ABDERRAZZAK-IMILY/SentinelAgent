@@ -73,6 +73,13 @@ export interface Report {
   toDate: string | null;
 }
 
+export interface GenerateReportRequest {
+  agentId: string;
+  reportType?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
 // ── Telemetry ─────────────────────────────────────────────────────────
 export interface MetricReport {
   id: string;

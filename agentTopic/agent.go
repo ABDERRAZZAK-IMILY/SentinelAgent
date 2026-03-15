@@ -9,8 +9,11 @@ import (
 	stdnet "net"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -37,6 +40,7 @@ const (
 	ConfigFile        = "agent_config.json"
 	HeartbeatInterval = 30 * time.Second
 	DataInterval      = 10 * time.Second
+	CommandPollDelay  = 8 * time.Second
 )
 
 var config AgentConfig
@@ -106,6 +110,18 @@ type HeartbeatRequest struct {
 	Status         string  `json:"status"`
 }
 
+type AgentCommand struct {
+	ID         string `json:"id"`
+	AgentID    string `json:"agentId"`
+	Command    string `json:"command"`
+	Parameters string `json:"parameters"`
+}
+
+type CommandResultRequest struct {
+	Status        string `json:"status"`
+	ResultMessage string `json:"resultMessage"`
+}
+
 // ==================================================================
 //  Network Stats
 // ==================================================================
@@ -171,6 +187,7 @@ func main() {
 	// Start heartbeat goroutine if registered
 	if config.AgentID != "" && config.ApiKey != "" {
 		go heartbeatLoop()
+		go commandPoller()
 	}
 
 	// Main data collection loop
@@ -212,6 +229,205 @@ func main() {
 
 		time.Sleep(DataInterval)
 	}
+}
+
+// ==================================================================
+//  Command Poller and Executor
+// ==================================================================
+
+func commandPoller() {
+	for {
+		time.Sleep(CommandPollDelay)
+
+		commands, err := fetchPendingCommands()
+		if err != nil {
+			log.Printf("⚠️ Command poll failed: %v", err)
+			continue
+		}
+
+		for _, command := range commands {
+			status, result := executeCommand(command)
+			if err := reportCommandResult(command.ID, status, result); err != nil {
+				log.Printf("⚠️ Could not report command result for %s: %v", command.ID, err)
+			}
+		}
+	}
+}
+
+func fetchPendingCommands() ([]AgentCommand, error) {
+	endpoint := fmt.Sprintf("%s/api/v1/agents/%s/commands/pending", config.ServerURL, config.AgentID)
+
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Agent-Key", config.ApiKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var commands []AgentCommand
+	if err := json.NewDecoder(resp.Body).Decode(&commands); err != nil {
+		return nil, err
+	}
+
+	return commands, nil
+}
+
+func executeCommand(command AgentCommand) (string, string) {
+	commandName := strings.ToUpper(strings.TrimSpace(command.Command))
+	params := map[string]any{}
+
+	if strings.TrimSpace(command.Parameters) != "" {
+		_ = json.Unmarshal([]byte(command.Parameters), &params)
+	}
+
+	// Backward-compatible format support: "COMMAND arg"
+	if strings.Contains(commandName, " ") {
+		parts := strings.Fields(commandName)
+		if len(parts) > 1 {
+			commandName = parts[0]
+			if _, ok := params["pid"]; !ok {
+				params["pid"] = parts[1]
+			}
+			if _, ok := params["ip"]; !ok {
+				params["ip"] = parts[1]
+			}
+		}
+	}
+
+	switch commandName {
+	case "TERMINATE_PROCESS":
+		pid, err := extractPID(params)
+		if err != nil {
+			return "FAILED", err.Error()
+		}
+		if err := terminateProcess(pid); err != nil {
+			return "FAILED", err.Error()
+		}
+		return "SUCCESS", fmt.Sprintf("Terminated process with PID %d", pid)
+
+	case "BLOCK_IP":
+		ip, err := extractIP(params)
+		if err != nil {
+			return "FAILED", err.Error()
+		}
+		if err := blockIP(ip); err != nil {
+			return "FAILED", err.Error()
+		}
+		return "SUCCESS", fmt.Sprintf("Applied outbound block rule for IP %s", ip)
+
+	default:
+		return "FAILED", "Unsupported command: " + commandName
+	}
+}
+
+func extractPID(params map[string]any) (int, error) {
+	raw, ok := params["pid"]
+	if !ok {
+		return 0, fmt.Errorf("missing required parameter: pid")
+	}
+
+	switch v := raw.(type) {
+	case float64:
+		return int(v), nil
+	case string:
+		pid, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			return 0, fmt.Errorf("invalid pid: %s", v)
+		}
+		return pid, nil
+	default:
+		return 0, fmt.Errorf("invalid pid parameter type")
+	}
+}
+
+func extractIP(params map[string]any) (string, error) {
+	raw, ok := params["ip"]
+	if !ok {
+		return "", fmt.Errorf("missing required parameter: ip")
+	}
+
+	ip := strings.TrimSpace(fmt.Sprint(raw))
+	if stdnet.ParseIP(ip) == nil {
+		return "", fmt.Errorf("invalid IP address: %s", ip)
+	}
+
+	return ip, nil
+}
+
+func terminateProcess(pid int) error {
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("process lookup failed: %w", err)
+	}
+
+	if err := proc.Kill(); err != nil {
+		return fmt.Errorf("failed to terminate process %d: %w", pid, err)
+	}
+
+	return nil
+}
+
+func blockIP(ip string) error {
+	cmd := exec.Command("iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("iptables command failed: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func reportCommandResult(commandID, status, result string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/agents/%s/commands/%s/result", config.ServerURL, config.AgentID, commandID)
+
+	payload := CommandResultRequest{
+		Status:        status,
+		ResultMessage: trimResult(result),
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, endpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Agent-Key", config.ApiKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("status update failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	return nil
+}
+
+func trimResult(message string) string {
+	if len(message) <= 700 {
+		return message
+	}
+	return message[:700]
 }
 
 // ==================================================================
