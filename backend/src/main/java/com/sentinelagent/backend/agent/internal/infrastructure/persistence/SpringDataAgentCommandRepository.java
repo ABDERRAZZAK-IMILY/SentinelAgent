@@ -10,4 +10,6 @@ public interface SpringDataAgentCommandRepository extends MongoRepository<AgentC
     List<AgentCommandDocument> findByAgentIdOrderByIssuedAtDesc(String agentId);
 
     List<AgentCommandDocument> findByAgentIdAndStatus(String agentId, String status);
+
+    List<AgentCommandDocument> findByAgentIdAndStatusOrderByIssuedAtAsc(String agentId, String status);
 }
