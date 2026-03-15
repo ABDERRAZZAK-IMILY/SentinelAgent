@@ -2,12 +2,16 @@ package com.sentinelagent.backend.agent;
 
 import com.sentinelagent.backend.agent.*;
 import com.sentinelagent.backend.agent.dto.*;
+import com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument;
+import com.sentinelagent.backend.agent.internal.infrastructure.persistence.SpringDataAgentCommandRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/agents")
@@ -17,6 +21,8 @@ public class AgentController {
     private final RegisterAgentUseCase registerAgentUseCase;
     private final ProcessHeartbeatUseCase processHeartbeatUseCase;
     private final GetAgentsUseCase getAgentsUseCase;
+    private final SpringDataAgentCommandRepository commandRepository;
+    private final AgentCommandDispatchService agentCommandDispatchService;
 
     @PostMapping("/register")
     public ResponseEntity<AgentRegistrationResponse> registerAgent(
@@ -54,29 +60,54 @@ public class AgentController {
     }
 
     @PostMapping("/{agentId}/commands")
-    public ResponseEntity<com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument> sendCommand(
+    public ResponseEntity<AgentCommandDocument> sendCommand(
             @PathVariable String agentId,
-            @RequestBody java.util.Map<String, String> payload,
-            @org.springframework.beans.factory.annotation.Autowired com.sentinelagent.backend.agent.internal.infrastructure.persistence.SpringDataAgentCommandRepository commandRepository) {
+            @RequestBody Map<String, String> payload) {
 
         String command = payload.get("command");
         String parameters = payload.getOrDefault("parameters", "{}");
 
-        var doc = com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument.builder()
+        var doc = AgentCommandDocument.builder()
                 .agentId(agentId)
                 .command(command)
                 .parameters(parameters)
                 .status("PENDING")
-                .issuedAt(java.time.LocalDateTime.now())
+                .issuedAt(LocalDateTime.now())
                 .build();
 
         return ResponseEntity.ok(commandRepository.save(doc));
     }
 
-    @GetMapping("/{agentId}/commands/history")
-    public ResponseEntity<List<com.sentinelagent.backend.agent.internal.infrastructure.persistence.AgentCommandDocument>> getCommandHistory(
+    @GetMapping("/{agentId}/commands/pending")
+    public ResponseEntity<List<AgentCommandDocument>> getPendingCommands(
             @PathVariable String agentId,
-            @org.springframework.beans.factory.annotation.Autowired com.sentinelagent.backend.agent.internal.infrastructure.persistence.SpringDataAgentCommandRepository commandRepository) {
+            @RequestHeader("X-Agent-Key") String apiKey) {
+
+        return ResponseEntity.ok(agentCommandDispatchService.getPendingCommands(agentId, apiKey));
+    }
+
+    @PutMapping("/{agentId}/commands/{commandId}/result")
+    public ResponseEntity<AgentCommandDocument> updateCommandResult(
+            @PathVariable String agentId,
+            @PathVariable String commandId,
+            @RequestHeader("X-Agent-Key") String apiKey,
+            @RequestBody AgentCommandResultRequest request) {
+
+        AgentCommandDocument updated = agentCommandDispatchService.updateCommandResult(
+                agentId,
+                commandId,
+                apiKey,
+                request.status(),
+                request.resultMessage());
+
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/{agentId}/commands/history")
+    public ResponseEntity<List<AgentCommandDocument>> getCommandHistory(@PathVariable String agentId) {
         return ResponseEntity.ok(commandRepository.findByAgentIdOrderByIssuedAtDesc(agentId));
+    }
+
+    public record AgentCommandResultRequest(String status, String resultMessage) {
     }
 }
