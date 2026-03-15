@@ -6,6 +6,19 @@
       <h2 class="font-comic text-4xl text-primary tracking-widest drop-shadow-[2px_2px_0px_#ff00ff]">BRAIN-BOT CHAT</h2>
     </div>
     <div class="flex items-center gap-4">
+      <label class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary/80">
+        <span>Context Agent</span>
+        <select
+          class="bg-navy-deep border-2 border-primary rounded px-2 py-1 text-primary text-xs font-bold"
+          [(ngModel)]="selectedAgentId"
+          (ngModelChange)="onAgentContextChange($event)"
+          name="selectedAgentId">
+          <option [ngValue]="null">GLOBAL</option>
+          @for (agent of agents; track agent.agentId) {
+            <option [ngValue]="agent.agentId">{{ agent.hostname }} ({{ agent.agentId }})</option>
+          }
+        </select>
+      </label>
       <div class="flex gap-2">
         <button class="size-10 flex items-center justify-center bg-accent-pink rounded-lg neo-brutalism-btn border-2 border-black">
           <span class="material-symbols-outlined text-black font-bold">terminal</span>
