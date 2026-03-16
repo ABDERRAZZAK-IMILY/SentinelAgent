@@ -1,0 +1,31 @@
+<aside class="sentinel-panel card xl:col-span-3">
+  <div class="card-body">
+    <h2 class="sentinel-title text-3xl">Action History</h2>
+    <div class="space-y-3">
+      @if (loading()) {
+        <div class="py-12 flex flex-col items-center justify-center text-primary/50 gap-2 text-xs font-bold uppercase tracking-widest">
+          <span class="material-symbols-outlined animate-spin text-3xl">cyclone</span>
+          Decrypting Logs...
+        </div>
+      } @else if (logs().length === 0) {
+        <div class="py-12 flex flex-col items-center justify-center text-slate-500 gap-2 text-xs font-bold uppercase tracking-widest text-center">
+          <span class="material-symbols-outlined text-4xl mb-2">check_circle</span>
+          No recent threats detected.<br />Perimeter secured.
+        </div>
+      } @else {
+        @for (log of logs(); track log.timestamp + log.category) {
+          <article
+            class="rounded-xl border border-base-content/20 p-3"
+            [class.border-primary]="log.highlight"
+            [class.bg-primary]="log.highlight"
+            [class.bg-opacity-10]="log.highlight">
+            <p class="text-sm font-medium">{{ log.message }}</p>
+            <p class="mt-2 text-[11px] uppercase tracking-widest text-primary/70">
+              {{ log.timestamp }} • {{ log.category }}
+            </p>
+          </article>
+        }
+      }
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,24 @@
+<aside class="space-y-4 xl:col-span-3">
+  <div class="sentinel-panel card">
+    <div class="card-body">
+      <h2 class="sentinel-title text-3xl">Control Panel</h2>
+      <ul class="menu bg-base-200 rounded-box">
+        @for (entry of quickLinks(); track entry.label) {
+          <li>
+            <a href="#">
+              <span class="material-symbols-outlined">{{ entry.icon }}</span>
+              {{ entry.label }}
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+  <div class="alert alert-error">
+    <span class="material-symbols-outlined">warning</span>
+    <div>
+      <h3 class="font-bold uppercase">Emergency Controls</h3>
+      <p class="text-xs">Force reboot and overclock procedures are armed.</p>
+    </div>
+  </div>
+</aside>
