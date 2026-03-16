@@ -1,0 +1,206 @@
+<section class="space-y-8">
+
+  <!-- Page Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-black text-primary tracking-widest uppercase">AI Security Reports</h1>
+      <p class="text-sm text-slate-400 mt-1">Generate AI-powered security analysis for monitored agents</p>
+    </div>
+    <span class="material-symbols-outlined text-primary text-4xl">analytics</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <!-- ── Left: Generate Form + Report List ── -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- Generate Report Form -->
+      <div class="bg-slate-900/60 border border-primary/20 rounded-xl p-6 space-y-5">
+        <h2 class="font-bold text-lg flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">post_add</span>
+          Generate New Report
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Agent selector -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Agent *</label>
+            <select [(ngModel)]="selectedAgentId"
+                    class="bg-slate-800 border border-primary/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 w-full">
+              <option value="" disabled>Select agent…</option>
+              @for (agent of agents; track agent.agentId) {
+                <option [value]="agent.agentId">{{ agent.hostname }} ({{ agent.agentId.slice(0, 8) }}…)</option>
+              }
+            </select>
+          </div>
+
+          <!-- Report type -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Report Type</label>
+            <select [(ngModel)]="reportType"
+                    class="bg-slate-800 border border-primary/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 w-full">
+              @for (rt of reportTypes; track rt) {
+                <option [value]="rt">{{ rt.replace('_', ' ') }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- From date -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">From Date (optional)</label>
+            <input type="date" [(ngModel)]="fromDate"
+                   class="bg-slate-800 border border-primary/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 w-full" />
+          </div>
+
+          <!-- To date -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">To Date (optional)</label>
+            <input type="date" [(ngModel)]="toDate"
+                   class="bg-slate-800 border border-primary/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 w-full" />
+          </div>
+        </div>
+
+        @if (generateError) {
+          <p class="text-red-400 text-sm flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">error</span>
+            {{ generateError }}
+          </p>
+        }
+
+        <button (click)="generateReport()" [disabled]="generating || !selectedAgentId"
+                class="flex items-center gap-2 bg-primary text-background-dark font-black px-6 py-2 rounded-lg
+                       hover:bg-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed uppercase text-sm tracking-wider">
+          @if (generating) {
+            <span class="material-symbols-outlined animate-spin text-base">progress_activity</span>
+            Generating…
+          } @else {
+            <span class="material-symbols-outlined text-base">bolt</span>
+            Generate AI Report
+          }
+        </button>
+      </div>
+
+      <!-- Report List -->
+      <div class="space-y-4">
+        <h2 class="font-bold text-lg flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">folder_open</span>
+          Generated Reports
+          <span class="text-xs text-slate-500 font-normal ml-auto">{{ reports.length }} total</span>
+        </h2>
+
+        @if (loadingReports) {
+          <div class="text-center py-12 text-slate-500">
+            <span class="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+            <p class="mt-2 text-sm">Loading reports…</p>
+          </div>
+        } @else if (reports.length === 0) {
+          <div class="text-center py-12 border border-dashed border-primary/20 rounded-xl text-slate-500">
+            <span class="material-symbols-outlined text-4xl text-primary/30">description</span>
+            <p class="mt-2 text-sm">No reports yet. Generate your first AI report above.</p>
+          </div>
+        } @else {
+          @for (report of reports; track report.id; let i = $index) {
+            <div class="bg-slate-900/50 border rounded-xl p-5 space-y-3 transition-all hover:border-primary/40"
+                 [ngClass]="{
+                   'border-red-500/30': report.uiSeverity === 'error',
+                   'border-yellow-500/30': report.uiSeverity === 'warning',
+                   'border-primary/20': report.uiSeverity === 'success'
+                 }">
+              <!-- Header row -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="space-y-1 flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-mono px-2 py-0.5 rounded border font-bold uppercase"
+                          [ngClass]="severityClass(report.uiSeverity)">
+                      {{ report.uiSeverity === 'error' ? 'HIGH RISK' : report.uiSeverity === 'warning' ? 'MEDIUM RISK' : 'LOW RISK' }}
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded">
+                      {{ report.reportType || 'REPORT' }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-500 font-mono">
+                    Agent: {{ report.agentId || 'Global' }}
+                    &nbsp;·&nbsp;
+                    {{ report.generatedAt | date:'MMM d, y HH:mm' }}
+                    @if (report.fromDate) {
+                      &nbsp;·&nbsp; Period: {{ report.fromDate | date:'MMM d' }} – {{ (report.toDate || report.generatedAt) | date:'MMM d' }}
+                    }
+                  </p>
+                </div>
+                <button (click)="downloadReport(report.id)"
+                        class="flex-shrink-0 flex items-center gap-1 text-xs font-bold text-primary hover:text-white transition-colors bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg">
+                  <span class="material-symbols-outlined text-sm">download</span>
+                  Download
+                </button>
+              </div>
+
+              <!-- AI Summary -->
+              <div class="bg-slate-800/60 rounded-lg p-4 border border-slate-700/50">
+                <p class="text-xs font-bold text-primary/60 uppercase tracking-wider mb-2">AI Summary</p>
+                <p class="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{{ report.aiSummary || 'No summary available.' }}</p>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ── Right Sidebar ── -->
+    <div class="space-y-6">
+
+      <!-- System Logs from Alerts -->
+      <div class="bg-slate-900 border border-primary/20 rounded-xl p-5">
+        <h3 class="font-bold mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">terminal</span>
+          Recent Threat Logs
+        </h3>
+        <div class="space-y-2 font-mono text-xs text-slate-400 max-h-72 overflow-y-auto">
+          @if (terminal.length === 0) {
+            <p class="text-slate-600 italic">No recent alerts.</p>
+          }
+          @for (line of terminal; track line) {
+            <p class="border-b border-slate-800 pb-1 leading-relaxed">
+              <span class="text-primary/50">{{ line.substring(0, 11) }}</span>{{ line.substring(11) }}
+            </p>
+          }
+          <div class="pt-2 flex items-center gap-2">
+            <span class="text-primary animate-pulse">▌</span>
+            <div class="h-px flex-1 bg-primary/20"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats summary -->
+      <div class="bg-slate-900 border border-primary/20 rounded-xl p-5">
+        <h3 class="font-bold mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">bar_chart</span>
+          Report Stats
+        </h3>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-400">Total Reports</span>
+            <span class="font-black text-primary text-lg">{{ reports.length }}</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-400">High Risk</span>
+            <span class="font-bold text-red-400">{{ countBySeverity('error') }}</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-400">Medium Risk</span>
+            <span class="font-bold text-yellow-400">{{ countBySeverity('warning') }}</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-400">Low Risk</span>
+            <span class="font-bold text-primary">{{ countBySeverity('success') }}</span>
+          </div>
+          <div class="flex justify-between items-center text-sm border-t border-slate-800 pt-3">
+            <span class="text-slate-400">Monitored Agents</span>
+            <span class="font-bold text-white">{{ agents.length }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
