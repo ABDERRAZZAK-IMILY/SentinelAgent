@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final LoginUseCase loginUseCase;
-    private final IrisLoginUseCase irisLoginUseCase;
     private final SetupAdminUseCase setupAdminUseCase;
 
     @PostMapping("/login")
@@ -30,15 +29,5 @@ public class AuthController {
             return ResponseEntity.ok(result.message());
         }
         return ResponseEntity.badRequest().body(result.message());
-    }
-
-    @PostMapping("/iris-login")
-    public ResponseEntity<?> loginWithIris(@RequestBody IrisLoginRequest request) {
-        try {
-            LoginResponse response = irisLoginUseCase.execute(request);
-            return ResponseEntity.ok(response);
-        } catch (IrisLoginUseCase.InvalidServiceKeyException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid Service Key");
-        }
     }
 }
