@@ -2,10 +2,7 @@ package com.sentinelagent.backend.securityanalysis.internal.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sentinelagent.backend.securityanalysis.internal.domain.AnalysisResult;
-import com.sentinelagent.backend.telemetry.MetricReport;
-import com.sentinelagent.backend.telemetry.NetworkConnection;
-import com.sentinelagent.backend.telemetry.Process;
-import com.sentinelagent.backend.telemetry.TelemetryReceivedEvent;
+import com.sentinelagent.backend.telemetry.event.TelemetryReceivedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -45,11 +42,11 @@ public class SecurityAnalysisServiceImpl implements SecurityAnalysisService {
     }
 
     @Override
-    public AnalysisResult analyzeReport(MetricReport report) {
-        String networkContext = enrichNetworkData(report.getNetworkConnections());
-        double uploadMB = report.getUploadSpeedMbps();
-        double downloadMB = report.getDownloadSpeedMbps();
+    public AnalysisResult analyzeTelemetry(TelemetryReceivedEvent event) {
+        double uploadMB = event.bytesSentSec() / 1024.0 / 1024.0;
+        double downloadMB = event.bytesRecvSec() / 1024.0 / 1024.0;
 
+        String networkContext = enrichNetworkData(event.networkConnections());
         String ragContext = findMitigationStrategy("High resource usage or suspicious network connection");
         if (ragContext == null) {
             ragContext = "No specific MITRE data found.";
@@ -93,13 +90,13 @@ public class SecurityAnalysisServiceImpl implements SecurityAnalysisService {
         Map<String, Object> params = Map.of(
                 "rag_context", ragContext,
                 "network_context", networkContext,
-                "hostname", report.getHostname() != null ? report.getHostname() : "Unknown-Host",
-                "cpu", report.getCpuUsage(),
-                "ram", report.getRamUsedPercent(),
+                "hostname", event.hostname() != null ? event.hostname() : "Unknown-Host",
+                "cpu", event.cpuUsage(),
+                "ram", event.ramUsedPercent(),
                 "format", outputConverter.getFormat(),
                 "upload", String.format("%.2f", uploadMB),
                 "download", String.format("%.2f", downloadMB),
-                "processes", report.getProcesses() != null ? report.getProcesses().toString() : "No processes");
+                "processes", event.processes() != null ? event.processes().toString() : "No processes");
 
         try {
             String response = chatModel.call(template.create(params)).getResult().getOutput().getText();
@@ -111,38 +108,6 @@ public class SecurityAnalysisServiceImpl implements SecurityAnalysisService {
             log.error("[SecurityAnalysisService] Failed to convert AI response", ex);
             throw ex;
         }
-    }
-
-    @Override
-    public AnalysisResult analyzeTelemetry(TelemetryReceivedEvent event) {
-        MetricReport report = MetricReport.builder()
-                .agentId(event.agentId())
-                .hostname(event.hostname())
-                .cpuUsage(event.cpuUsage())
-                .ramUsedPercent(event.ramUsedPercent())
-                .bytesSentSec(event.bytesSentSec())
-                .bytesRecvSec(event.bytesRecvSec())
-                .processes(event.processes() != null ? event.processes().stream()
-                        .map(p -> Process.builder()
-                                .pid(p.pid())
-                                .name(p.name())
-                                .cpuUsage(p.cpuUsage())
-                                .username(p.username())
-                                .build())
-                        .collect(Collectors.toList()) : List.of())
-                .networkConnections(event.networkConnections() != null ? event.networkConnections().stream()
-                        .map(n -> NetworkConnection.builder()
-                                .processName(n.processName())
-                                .pid(n.pid())
-                                .remoteAddress(n.remoteAddress())
-                                .remotePort(n.remotePort())
-                                .status(n.status())
-                                .build())
-                        .collect(Collectors.toList()) : List.of())
-                .receivedAt(LocalDateTime.now())
-                .build();
-
-        return analyzeReport(report);
     }
 
     private String cleanJsonResponse(String response) {
@@ -184,17 +149,17 @@ public class SecurityAnalysisServiceImpl implements SecurityAnalysisService {
                 """, technique, mitreId, content);
     }
 
-    private String enrichNetworkData(List<NetworkConnection> connections) {
+    private String enrichNetworkData(List<TelemetryReceivedEvent.NetworkConnectionInfo> connections) {
         if (connections == null || connections.isEmpty()) {
             return "No active network connections.";
         }
 
         return connections.stream()
                 .map(conn -> {
-                    String ip = conn.getRemoteAddress();
+                    String ip = conn.remoteAddress();
                     String country = getCountryByIp(ip);
                     boolean isMalicious = isMaliciousIp(ip);
-                    String pName = (conn.getProcessName() != null) ? conn.getProcessName() : "Unknown";
+                    String pName = (conn.processName() != null) ? conn.processName() : "Unknown";
                     return String.format(
                             "- Process: %s | Remote IP: %s | Location: %s | Reputation: %s",
                             pName,
