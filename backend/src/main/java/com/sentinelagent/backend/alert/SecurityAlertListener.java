@@ -2,14 +2,12 @@ package com.sentinelagent.backend.alert;
 
 import com.sentinelagent.backend.alert.internal.infrastructure.persistence.AlertDocument;
 import com.sentinelagent.backend.alert.internal.infrastructure.persistence.SpringDataAlertRepository;
-import com.sentinelagent.backend.securityanalysis.SecurityAlertGeneratedEvent;
+import com.sentinelagent.backend.securityanalysis.event.SecurityAlertGeneratedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 
 @Slf4j
 @Component
