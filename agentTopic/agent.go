@@ -630,14 +630,7 @@ func collectMetrics() MetricReport {
 	diskUsedPercent := 0.0
 	diskTotalGb := uint64(0)
 
-	// solution to enable disk metrics:
-	// usage, err := disk.Usage(os.Getenv("SystemDrive") + "\\")
-	// if err == nil && usage != nil {
-	// 	diskUsedPercent = usage.UsedPercent
-	// 	diskTotalGb = usage.Total / (1024 * 1024 * 1024)
-	// }
 
-	// Processes (Top 5)
 	procs := getTopProcesses(5)
 
 	// Network (Smart Connections)
@@ -721,7 +714,6 @@ func getSmartNetworkConnections(topProcs []ProcessModel) []NetworkConnection {
 
 	count := 0
 	for _, c := range connections {
-		// keep only meaningful connections
 		if c.Status == "ESTABLISHED" && c.Raddr.IP != "" && c.Raddr.IP != "127.0.0.1" && c.Raddr.IP != "::1" {
 
 			pName := procNames[c.Pid]
