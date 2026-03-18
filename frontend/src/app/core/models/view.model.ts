@@ -51,6 +51,7 @@ export interface ToggleSetting {
 export interface QuickLink {
   readonly label: string;
   readonly icon: string;
+  readonly route: string;
 }
 
 export interface MetricSummary {

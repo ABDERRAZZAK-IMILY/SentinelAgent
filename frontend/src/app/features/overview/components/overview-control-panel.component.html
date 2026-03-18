@@ -5,7 +5,10 @@
       <ul class="menu bg-base-200 rounded-box">
         @for (entry of quickLinks(); track entry.label) {
           <li>
-            <a href="#">
+            <a
+              [routerLink]="entry.route"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: entry.route === '/overview' }">
               <span class="material-symbols-outlined">{{ entry.icon }}</span>
               {{ entry.label }}
             </a>
@@ -17,8 +20,8 @@
   <div class="alert alert-error">
     <span class="material-symbols-outlined">warning</span>
     <div>
-      <h3 class="font-bold uppercase">Emergency Controls</h3>
-      <p class="text-xs">Force reboot and overclock procedures are armed.</p>
+      <h3 class="font-bold uppercase">Powered By Imily </h3>
+      <p class="text-xs">Be careful when using these controls.</p>
     </div>
   </div>
 </aside>
