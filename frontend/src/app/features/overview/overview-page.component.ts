@@ -33,10 +33,9 @@ export class OverviewPageComponent implements OnInit {
   private readonly store = inject(Store);
 
   protected readonly quickLinks: readonly QuickLink[] = [
-    { label: 'Overview', icon: 'dashboard' },
-    { label: 'Agent Fleet', icon: 'smart_toy' },
-    { label: 'Command Logs', icon: 'terminal' },
-    { label: 'Firewall', icon: 'security' },
+    { label: 'Overview', icon: 'dashboard', route: '/overview' },
+    { label: 'Agent Fleet', icon: 'smart_toy', route: '/squad' },
+    { label: 'Command Logs', icon: 'terminal', route: '/telemetry' },
   ];
 
   protected readonly vm$ = combineLatest({
