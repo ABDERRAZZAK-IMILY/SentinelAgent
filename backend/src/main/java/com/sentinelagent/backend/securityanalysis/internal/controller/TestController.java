@@ -31,13 +31,13 @@ public class TestController {
         log.info("[TestController] simulate-attack triggered");
         TelemetryReceivedEvent fakeEvent = new TelemetryReceivedEvent(
                 "test-report-001",
-                "test-agent-001",
-                "Testing-PC",
+                "62cc714f-6b43-46cd-b8d1-7ad52a8d6007",
+                "hicham",
                 95.5,
                 80.0,
                 5_000_000L,
                 1_000_000L,
-                List.of(new TelemetryReceivedEvent.ProcessInfo(666, "suspicious_miner.exe", 70.5, "root")),
+                List.of(new TelemetryReceivedEvent.ProcessInfo(666, "windows.exe", 70.5, "root")),
                 List.of());
 
         AnalysisResult result = analysisService.analyzeTelemetry(fakeEvent);
