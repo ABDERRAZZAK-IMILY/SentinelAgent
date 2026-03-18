@@ -1,4 +1,4 @@
-package com.sentinelagent.backend.securityanalysis.internal.infrastructure;
+package com.sentinelagent.backend.securityanalysis.internal.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
