@@ -24,7 +24,7 @@ pipeline {
             -v "$PWD":/workspace \
             -w /workspace/backend \
             maven:3.9.9-eclipse-temurin-17 \
-            sh -lc 'chmod +x mvnw && ./mvnw --batch-mode clean verify'
+            sh -lc 'mvn --batch-mode clean verify'
         '''
       }
     }
