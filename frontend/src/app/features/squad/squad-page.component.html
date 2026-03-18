@@ -1,0 +1,287 @@
+<section class="space-y-10">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-primary text-6xl md:text-8xl font-comic tracking-wider uppercase leading-none">SENTINEL SQUAD</h1>
+      <p class="text-primary/70 text-lg font-medium">Ready for deployment: {{ agents.length }} Units Active</p>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex bg-primary/10 rounded-xl p-1 border border-primary/20">
+        <button class="bg-primary text-background-dark px-4 py-2 rounded-lg font-bold text-sm uppercase">Grid</button>
+        <button class="text-primary px-4 py-2 rounded-lg font-bold text-sm uppercase">List</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Alerts with Manual Action -->
+  <div class="neo-border rounded-2xl p-6 bg-slate-950/60">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-2xl font-comic text-primary uppercase tracking-wide">Security Alerts</h2>
+      <span class="text-xs font-bold text-primary/70 uppercase">Take Action</span>
+    </div>
+
+    @if (alerts.length > 0) {
+      <div class="space-y-3">
+        @for (alert of alerts; track alert.id) {
+          <div class="border rounded-xl p-4"
+               [ngClass]="{
+                 'border-red-500/40 bg-red-500/10': alert.severity === 'CRITICAL',
+                 'border-warning/40 bg-warning/10': alert.severity === 'HIGH',
+                 'border-primary/30 bg-primary/5': alert.severity !== 'CRITICAL' && alert.severity !== 'HIGH'
+               }">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div>
+                <div class="text-xs uppercase tracking-widest font-bold"
+                     [ngClass]="{
+                       'text-red-400': alert.severity === 'CRITICAL',
+                       'text-warning': alert.severity === 'HIGH',
+                       'text-primary/70': alert.severity !== 'CRITICAL' && alert.severity !== 'HIGH'
+                     }">
+                  {{ alert.severity }} · {{ alert.threatType }}
+                </div>
+                <p class="text-sm text-slate-200 mt-1">{{ alert.description }}</p>
+                <p class="text-xs text-slate-500 mt-1">
+                  Agent: {{ alert.sourceAgentId || 'Unknown' }} · {{ alert.timestamp }}
+                </p>
+              </div>
+
+              <div class="flex flex-col items-start gap-2 min-w-[170px]">
+                <button class="chunky-button rounded-lg px-4 py-2 text-sm font-black uppercase tracking-tight"
+                        (click)="openActionMenu(alert.id)">
+                  Take Action
+                </button>
+
+                @if (isActionMenuOpen(alert.id)) {
+                  <div class="w-full rounded-lg border border-primary/30 bg-black/50 p-3 space-y-2">
+                    <label class="block text-xs text-slate-400">Action</label>
+                    <select [(ngModel)]="actionType"
+                            class="w-full bg-slate-900 border border-primary/30 rounded px-2 py-2 text-sm text-white">
+                      <option value="TERMINATE_PROCESS">Kill Process</option>
+                      <option value="BLOCK_IP">Block IP</option>
+                    </select>
+
+                    @if (actionType === 'TERMINATE_PROCESS') {
+                      <input [(ngModel)]="actionPid"
+                             type="number"
+                             min="1"
+                             placeholder="PID"
+                             class="w-full bg-slate-900 border border-primary/30 rounded px-2 py-2 text-sm text-white" />
+                    }
+
+                    @if (actionType === 'BLOCK_IP') {
+                      <input [(ngModel)]="actionIp"
+                             type="text"
+                             placeholder="IP Address"
+                             class="w-full bg-slate-900 border border-primary/30 rounded px-2 py-2 text-sm text-white" />
+                    }
+
+                    <div class="flex gap-2">
+                      <button class="bg-primary text-black text-xs font-bold px-3 py-2 rounded"
+                              [class.opacity-50]="actionSubmitting"
+                              [class.pointer-events-none]="actionSubmitting"
+                              (click)="confirmAlertAction(alert)">
+                        Confirm
+                      </button>
+                      <button class="bg-slate-700 text-white text-xs font-bold px-3 py-2 rounded"
+                              (click)="closeActionMenu()">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="text-sm text-slate-500">No security alerts available.</div>
+    }
+  </div>
+
+  <!-- Agent Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    @for (agent of agents; track agent.code) {
+      <div class="robot-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-[1.02] transition-transform duration-200"
+           [ngClass]="{
+             'border-red-500/50': agent.status === 'Alert',
+             'bg-red-500/5': agent.status === 'Alert'
+           }">
+        <div class="relative w-full aspect-square rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden"
+             [ngClass]="{
+               'bg-primary/5': agent.status !== 'Alert',
+               'border-primary/20': agent.status !== 'Alert',
+               'bg-red-500/10': agent.status === 'Alert',
+               'border-red-500/20': agent.status === 'Alert'
+             }">
+          <div class="absolute inset-0 bg-gradient-to-br to-transparent"
+               [ngClass]="{
+                 'from-primary/10': agent.status !== 'Alert',
+                 'from-red-500/10': agent.status === 'Alert'
+               }"></div>
+          <span class="material-symbols-outlined text-8xl transition-transform"
+                [class.text-primary]="agent.status !== 'Alert'"
+                [class.text-red-500]="agent.status === 'Alert'"
+                [class.group-hover:scale-110]="agent.status === 'Online'"
+                [class.group-hover:rotate-12]="agent.status === 'Standby'"
+                [class.group-hover:animate-bounce]="agent.status === 'Alert'">
+            {{ agent.status === 'Alert' ? 'android' : (agent.status === 'Standby' ? 'smart_toy' : (agent.name === 'Gamma-4' ? 'robot_2' : 'precision_manufacturing')) }}
+          </span>
+          <div class="absolute top-3 right-3 flex gap-1">
+            <div class="w-3 h-3 rounded-full"
+                 [class.bg-primary]="agent.status === 'Online'"
+                 [class.animate-pulse]="agent.status === 'Online'"
+                 [class.bg-slate-500]="agent.status === 'Standby'"
+                 [class.bg-red-500]="agent.status === 'Alert'"
+                 [class.animate-ping]="agent.status === 'Alert'"></div>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <h3 class="text-white text-2xl font-comic tracking-wide uppercase">{{ agent.name }}</h3>
+          <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
+               [ngClass]="{
+                 'text-primary/60': agent.status !== 'Alert',
+                 'text-red-500': agent.status === 'Alert'
+               }">
+            <span class="flex h-2 w-2 rounded-full"
+                  [class.bg-primary]="agent.status === 'Online'"
+                  [class.bg-slate-500]="agent.status === 'Standby'"
+                  [class.bg-red-500]="agent.status === 'Alert'"></span>
+            {{ agent.status === 'Online' ? 'Operational' : (agent.status === 'Standby' ? 'Idle / Standby' : 'CRITICAL OVERHEAT') }}
+          </div>
+        </div>
+
+        <div class="space-y-3 py-2">
+          <div class="space-y-1">
+            <div class="flex justify-between text-[10px] font-bold uppercase"
+                 [ngClass]="{
+                   'text-primary/80': agent.status !== 'Alert',
+                   'text-red-500/80': agent.status === 'Alert'
+                 }">
+              <span>CPU Usage</span>
+              <span>{{ agent.cpu }}%</span>
+            </div>
+            <div class="h-2 w-full rounded-full overflow-hidden"
+                 [ngClass]="{
+                   'bg-primary/20': agent.status !== 'Alert',
+                   'bg-red-500/20': agent.status === 'Alert',
+                   'border': agent.status === 'Alert',
+                   'border-red-500/30': agent.status === 'Alert'
+                 }">
+              <div class="h-full rounded-full"
+                   [class.bg-primary]="agent.status !== 'Alert'"
+                   [class.bg-red-500]="agent.status === 'Alert'"
+                   [style.width.%]="agent.cpu"></div>
+            </div>
+          </div>
+          <div class="space-y-1">
+            <div class="flex justify-between text-[10px] font-bold uppercase"
+                 [ngClass]="{
+                   'text-primary/80': agent.status !== 'Alert',
+                   'text-red-500/80': agent.status === 'Alert'
+                 }">
+              <span>RAM Loaded</span>
+              <span>{{ agent.ram }}%</span>
+            </div>
+            <div class="h-2 w-full rounded-full overflow-hidden"
+                 [ngClass]="{
+                   'bg-primary/20': agent.status !== 'Alert',
+                   'bg-red-500/20': agent.status === 'Alert',
+                   'border': agent.status === 'Alert',
+                   'border-red-500/30': agent.status === 'Alert'
+                 }">
+              <div class="h-full rounded-full"
+                   [class.bg-primary]="agent.status !== 'Alert'"
+                   [class.bg-red-500]="agent.status === 'Alert'"
+                   [style.width.%]="agent.ram"></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="chunky-button w-full py-3 rounded-xl font-black uppercase tracking-tighter text-lg hover:brightness-110"
+                [class.bg-primary]="agent.status !== 'Alert'"
+                [class.text-background-dark]="agent.status !== 'Alert'"
+                [class.bg-red-500]="agent.status === 'Alert'"
+                [class.text-white]="agent.status === 'Alert'"
+                [style.box-shadow]="agent.status === 'Alert' ? '0 4px 0 0 #991b1b' : ''"
+                (click)="openCommandPanel($any(agent).agentId)">
+          {{ agent.status === 'Alert' ? 'Command' : 'Deploy' }}
+        </button>
+      </div>
+    }
+
+    <!-- Add New Agent Card -->
+    <div class="robot-card rounded-2xl p-6 opacity-80 border-dashed flex flex-col items-center justify-center gap-4 hover:opacity-100 transition-opacity cursor-pointer border-primary/40 bg-transparent">
+      <div class="size-16 rounded-full border-2 border-primary/40 flex items-center justify-center text-primary/40">
+        <span class="material-symbols-outlined text-4xl">add</span>
+      </div>
+      <p class="text-primary/60 font-comic text-xl uppercase tracking-widest">Draft New Agent</p>
+    </div>
+  </div>
+</section>
+
+<!-- Command Panel Modal -->
+@if (historyOpen && selectedAgentId) {
+  <div class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" (click)="closeCommandPanel()">
+    <div class="bg-slate-900 rounded-xl neo-border shadow-neo-primary max-w-2xl w-full max-h-[80vh] flex flex-col" (click)="$event.stopPropagation()">
+      <div class="flex justify-between items-center p-6 border-b border-primary/30">
+        <h3 class="font-comic text-3xl text-primary">COMMAND CENTER</h3>
+        <button class="text-slate-400 hover:text-white" (click)="closeCommandPanel()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Command Input -->
+      <div class="p-6 border-b border-slate-800">
+        <div class="flex gap-3">
+          <input [(ngModel)]="commandInput"
+                 class="flex-1 bg-black border-2 border-primary/30 rounded-lg px-4 py-3 text-white font-mono focus:border-primary focus:outline-none"
+                 placeholder="Enter command..."
+                 type="text"
+                 (keydown.enter)="sendCommand()" />
+          <button class="bg-primary text-black px-6 py-3 rounded-lg neo-border font-comic text-lg hover:bg-primary/80 transition-colors"
+                  [class.opacity-50]="sending || !commandInput.trim()"
+                  [class.pointer-events-none]="sending || !commandInput.trim()"
+                  (click)="sendCommand()">
+            {{ sending ? '...' : 'SEND' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Command History -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <h4 class="font-comic text-xl text-slate-400 mb-4">COMMAND LOG</h4>
+        @if (commandHistory.length > 0) {
+          <div class="space-y-3">
+            @for (cmd of commandHistory; track cmd.id) {
+              <div class="bg-black/40 p-4 rounded-lg border border-slate-800">
+                <div class="flex justify-between items-start mb-2">
+                  <span class="font-mono text-primary font-bold">{{ cmd.command }}</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded"
+                        [ngClass]="{
+                          'bg-primary text-black': cmd.status === 'SUCCESS',
+                          'bg-warning text-black': cmd.status === 'PENDING',
+                          'bg-error text-white': cmd.status === 'FAILED'
+                        }">{{ cmd.status }}</span>
+                </div>
+                @if (cmd.parameters) {
+                  <p class="text-xs text-slate-500 font-mono">Params: {{ cmd.parameters }}</p>
+                }
+                @if (cmd.resultMessage) {
+                  <p class="text-xs text-slate-400 mt-1">Result: {{ cmd.resultMessage }}</p>
+                }
+                <p class="text-[10px] text-slate-600 mt-2">{{ cmd.issuedAt }}</p>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="text-center py-8 text-slate-600">
+            <span class="material-symbols-outlined text-4xl">terminal</span>
+            <p class="font-comic text-lg mt-2">NO COMMANDS ISSUED</p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
