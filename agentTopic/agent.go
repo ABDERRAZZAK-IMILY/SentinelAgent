@@ -18,7 +18,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/shirou/gopsutil/v3/cpu"
-	// "github.com/shirou/gopsutil/v3/disk" // optional (see collectMetrics)
+	// "github.com/shirou/gopsutil/v3/disk" // optional
 	"github.com/shirou/gopsutil/v3/mem"
 	gnet "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
@@ -46,7 +46,7 @@ const (
 var config AgentConfig
 
 // ==================================================================
-//  Data Models (MATCH Java TelemetryKafkaMessage)
+//  Data Models
 // ==================================================================
 
 type MetricReport struct {
@@ -460,7 +460,6 @@ func loadConfig() bool {
 		return false
 	}
 
-	// Merge saved config with defaults (prioritize saved values)
 	if savedConfig.AgentID != "" {
 		config.AgentID = savedConfig.AgentID
 	}
@@ -553,7 +552,6 @@ func getLocalIP() string {
 		if ip == "127.0.0.1" || ip == "::1" {
 			continue
 		}
-		// Keep it simple: return first non-loopback
 		return ip
 	}
 	return "unknown"

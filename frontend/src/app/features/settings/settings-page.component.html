@@ -1,0 +1,185 @@
+<section class="space-y-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="font-comic text-5xl text-primary tracking-wider">DYNAMIC SETTINGS</h2>
+      <p class="text-slate-400 font-bold uppercase tracking-wider">Live backend status and persisted UI preferences</p>
+    </div>
+    <div class="rounded-lg border border-black bg-slate-900/60 px-4 py-2 text-xs uppercase font-bold text-slate-300">
+      Snapshot: {{ snapshotTimestamp() }}
+    </div>
+  </header>
+
+  @if (settingsNotice || settingsError) {
+    <div class="flex items-center justify-between rounded-lg border px-4 py-3 text-sm" [ngClass]="settingsError ? 'border-error/40 bg-error/10 text-error' : 'border-success/40 bg-success/10 text-success'">
+      <span>{{ settingsError || settingsNotice }}</span>
+      <button class="text-xs uppercase font-black opacity-70 hover:opacity-100" (click)="dismissMessage()">dismiss</button>
+    </div>
+  }
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <section class="xl:col-span-2 bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-comic text-2xl uppercase">Live Backend Snapshot</h3>
+        <button class="bg-primary text-black px-4 py-2 neo-brutal-sm font-black text-sm uppercase" [class.opacity-50]="loadingSnapshot" [class.pointer-events-none]="loadingSnapshot" (click)="refreshSnapshot()">
+          {{ loadingSnapshot ? 'Refreshing...' : 'Refresh' }}
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="rounded-lg border border-black bg-black/20 p-3">
+          <p class="text-[10px] uppercase text-slate-400">Users</p>
+          <p class="text-2xl font-black">{{ users.length }}</p>
+        </div>
+        <div class="rounded-lg border border-black bg-black/20 p-3">
+          <p class="text-[10px] uppercase text-slate-400">Active Agents</p>
+          <p class="text-2xl font-black">{{ agentStats?.active ?? 0 }}</p>
+        </div>
+        <div class="rounded-lg border border-black bg-black/20 p-3">
+          <p class="text-[10px] uppercase text-slate-400">Critical Alerts</p>
+          <p class="text-2xl font-black">{{ alertStats?.CRITICAL ?? 0 }}</p>
+        </div>
+        <div class="rounded-lg border border-black bg-black/20 p-3">
+          <p class="text-[10px] uppercase text-slate-400">Total Alerts</p>
+          <p class="text-2xl font-black">{{ totalAlerts() }}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <div class="rounded-lg border border-black bg-black/20 p-3">
+          <p class="text-[10px] uppercase text-slate-400">AI Status</p>
+          <p class="font-bold mt-1">{{ aiStatus?.status ?? '-' }}</p>
+          <p class="text-xs text-slate-400 mt-1">Model: {{ aiStatus?.modelVersion ?? '-' }}</p>
+        </div>
+        <div class="rounded-lg border border-black bg-black/20 p-3">
+          <p class="text-[10px] uppercase text-slate-400">RAG DB Status</p>
+          <p class="font-bold mt-1">{{ aiStatus?.ragDatabaseStatus ?? '-' }}</p>
+          <p class="text-xs text-slate-400 mt-1">Accuracy: {{ aiStatus ? (aiStatus.accuracy * 100 | number:'1.0-0') + '%' : '-' }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
+      <h3 class="font-comic text-2xl uppercase">Profile & UI</h3>
+
+      <div>
+        <label class="text-xs font-bold uppercase text-slate-400">Alias</label>
+        <input [(ngModel)]="preferences.alias" class="mt-1 w-full bg-slate-800 border-2 border-black rounded-lg px-3 py-2 text-white font-bold focus:border-primary focus:outline-none" placeholder="Display alias" type="text" />
+      </div>
+
+      <div>
+        <p class="text-xs font-bold uppercase text-slate-400">Theme</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          @for (theme of themeOptions; track trackByText($index, theme)) {
+            <button class="px-3 py-1 border-2 rounded text-xs font-black uppercase" [ngClass]="preferences.theme === theme ? 'bg-primary text-black border-primary' : 'bg-slate-900/60 text-slate-200 border-black'" (click)="preferences.theme = theme">
+              {{ theme }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-bold uppercase text-slate-400">Notification Sound</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          @for (sound of soundOptions; track trackByText($index, sound)) {
+            <button class="px-3 py-1 border-2 rounded text-xs font-black uppercase" [ngClass]="preferences.sound === sound ? 'bg-info text-black border-info' : 'bg-slate-900/60 text-slate-200 border-black'" (click)="preferences.sound = sound">
+              {{ sound }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-bold uppercase text-slate-400">Auto Refresh</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          @for (seconds of refreshOptions; track trackByText($index, seconds)) {
+            <button class="px-3 py-1 border-2 rounded text-xs font-black" [ngClass]="preferences.autoRefreshSeconds === seconds ? 'bg-success text-black border-success' : 'bg-slate-900/60 text-slate-200 border-black'" (click)="preferences.autoRefreshSeconds = seconds">
+              {{ seconds }}s
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-black bg-black/20 p-3 text-sm">
+        <p class="text-[10px] uppercase text-slate-400">Desktop Notifications</p>
+        <p class="font-bold mt-1">{{ preferences.desktopNotifications ? 'Enabled' : 'Disabled' }}</p>
+        <p class="text-xs text-slate-400">Browser permission: {{ notificationPermissionLabel() }}</p>
+        <button class="mt-3 border-2 px-3 py-1 rounded text-xs font-black uppercase" [ngClass]="preferences.desktopNotifications ? 'bg-error text-white border-error' : 'bg-primary text-black border-primary'" (click)="toggleDesktopNotifications()">
+          {{ preferences.desktopNotifications ? 'Disable' : 'Enable' }}
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button class="bg-primary text-black py-2 neo-brutal-sm font-black text-xs uppercase" (click)="savePreferences()">Save</button>
+        <button class="bg-slate-200 text-black py-2 neo-brutal-sm font-black text-xs uppercase" (click)="resetDefaults()">Reset</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="font-comic text-2xl uppercase">Local Security Policies</h3>
+      <span class="text-xs uppercase text-slate-400">{{ securitySettings.length }} items</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      @for (setting of securitySettings; track trackBySetting($index, setting)) {
+        <div class="rounded-lg border p-4" [ngClass]="setting.enabled ? 'border-success/50 bg-success/10' : 'border-black bg-black/20'">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-bold uppercase text-sm">{{ setting.label }}</p>
+              <p class="text-xs text-slate-400 mt-1">{{ setting.description }}</p>
+            </div>
+            <button class="border-2 rounded px-2 py-1 text-[10px] font-black uppercase"
+                    [ngClass]="setting.enabled ? 'border-success text-success' : 'border-slate-400 text-slate-300'"
+                    (click)="toggleSecurity(setting)">
+              {{ setting.enabled ? 'On' : 'Off' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="font-comic text-2xl uppercase">User Management</h3>
+      <button class="bg-primary text-black px-4 py-2 neo-brutal-sm font-black text-xs uppercase" (click)="toggleCreateForm()">
+        {{ showCreateForm ? 'Cancel' : 'Add User' }}
+      </button>
+    </div>
+
+    @if (showCreateForm) {
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 rounded-lg border border-primary/30 bg-black/20 p-4">
+        <input [(ngModel)]="newUsername" class="bg-slate-800 border-2 border-black rounded-lg px-3 py-2 text-white" placeholder="Username" type="text" />
+        <input [(ngModel)]="newPassword" class="bg-slate-800 border-2 border-black rounded-lg px-3 py-2 text-white" placeholder="Password" type="password" />
+        <select [(ngModel)]="newRole" class="bg-slate-800 border-2 border-black rounded-lg px-3 py-2 text-white">
+          @for (role of roleOptions; track trackByText($index, role)) {
+            <option [value]="role">{{ role }}</option>
+          }
+        </select>
+        <button class="bg-primary text-black neo-brutal-sm font-black text-xs uppercase" [class.opacity-50]="isCreateDisabled()" [class.pointer-events-none]="isCreateDisabled()" (click)="createUser()">
+          {{ creatingUser ? 'Creating...' : 'Create' }}
+        </button>
+      </div>
+    }
+
+    <div class="space-y-2">
+      @for (user of users; track trackByUser($index, user)) {
+        <div class="rounded-lg border border-black bg-black/20 p-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-bold uppercase text-sm">{{ user.username }}</p>
+            <div class="flex gap-1 mt-1">
+              @for (role of user.roles; track trackByText($index, role)) {
+                <span class="px-2 py-0.5 rounded text-[10px] font-black" [ngClass]="roleBadgeClass(role)">{{ role }}</span>
+              }
+            </div>
+          </div>
+          <button class="bg-error text-white border-2 border-error px-3 py-1 rounded text-xs font-black uppercase hover:bg-error/80" (click)="deleteUser(user)">Remove</button>
+        </div>
+      }
+      @if (users.length === 0) {
+        <p class="text-sm text-slate-400">No users available.</p>
+      }
+    </div>
+  </section>
+</section>

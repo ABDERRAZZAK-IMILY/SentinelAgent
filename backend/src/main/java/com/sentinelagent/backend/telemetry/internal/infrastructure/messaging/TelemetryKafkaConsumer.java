@@ -1,7 +1,7 @@
 package com.sentinelagent.backend.telemetry.internal.infrastructure.messaging;
 
-import com.sentinelagent.backend.agent.AgentValidationService;
-import com.sentinelagent.backend.agent.InvalidAgentCredentialsException;
+import com.sentinelagent.backend.agent.api.AgentValidationService;
+import com.sentinelagent.backend.agent.api.InvalidAgentCredentialsException;
 import com.sentinelagent.backend.telemetry.SaveTelemetryUseCase;
 import com.sentinelagent.backend.telemetry.TelemetryReceivedEvent;
 import com.sentinelagent.backend.telemetry.dto.TelemetryData;

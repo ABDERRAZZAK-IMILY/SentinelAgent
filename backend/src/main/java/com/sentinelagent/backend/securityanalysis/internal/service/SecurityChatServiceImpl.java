@@ -1,7 +1,7 @@
 package com.sentinelagent.backend.securityanalysis.internal.service;
 
-import com.sentinelagent.backend.telemetry.TelemetryQueryService;
-import com.sentinelagent.backend.telemetry.TelemetryResponse;
+import com.sentinelagent.backend.telemetry.api.TelemetryFacade;
+import com.sentinelagent.backend.telemetry.dto.TelemetryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
@@ -19,7 +19,7 @@ public class SecurityChatServiceImpl implements SecurityChatService {
     private static final String CHAT_FALLBACK = "AI uplink is temporarily unavailable. Please try again in a moment.";
 
     private final ChatModel chatModel;
-    private final TelemetryQueryService telemetryQueryService;
+    private final TelemetryFacade telemetryFacade;
 
     @Override
     public String chatWithAgent(String message, String agentId) {
@@ -74,7 +74,7 @@ public class SecurityChatServiceImpl implements SecurityChatService {
             return "No agentId provided. Telemetry unavailable.";
         }
 
-        Optional<TelemetryResponse> latest = telemetryQueryService.getLatest(agentId);
+        Optional<TelemetryResponse> latest = telemetryFacade.getLatest(agentId);
         if (latest.isEmpty()) {
             return "No telemetry found for agent " + agentId + ".";
         }
@@ -96,4 +96,3 @@ public class SecurityChatServiceImpl implements SecurityChatService {
                 t.networkConnections().size());
     }
 }
-

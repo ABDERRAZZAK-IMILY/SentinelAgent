@@ -1,0 +1,253 @@
+<section class="space-y-8">
+  <!-- Header -->
+  <header class="flex justify-between items-center bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+    <div>
+      <h2 class="font-comic text-4xl text-primary tracking-widest uppercase">Agent Telemetry</h2>
+      <p class="text-slate-400 font-medium">Real-time system metrics from your Sentinel fleet</p>
+    </div>
+    <div class="flex gap-4 items-center">
+      @if (selectedAgent) {
+        <div class="bg-primary px-6 py-2 rounded-lg neo-border shadow-neo text-black font-comic text-xl">
+          {{ selectedAgent.hostname }}
+        </div>
+      }
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="flex justify-center items-center py-20">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <!-- Agent List Sidebar -->
+      <div class="space-y-4">
+        <h3 class="font-comic text-2xl text-white">SELECT AGENT</h3>
+        <div class="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+          @for (agent of agents; track agent.agentId) {
+            <button
+              class="w-full text-left bg-card-dark p-4 rounded-xl neo-border shadow-neo hover:shadow-neo-primary transition-all"
+              [class.border-primary]="selectedAgent?.agentId === agent.agentId"
+              [class.bg-primary]="selectedAgent?.agentId === agent.agentId"
+              [class.text-black]="selectedAgent?.agentId === agent.agentId"
+              (click)="selectAgent(agent)">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-2xl"
+                      [ngClass]="{
+                        'text-primary': selectedAgent?.agentId !== agent.agentId && agent.status === 'ACTIVE',
+                        'text-error': agent.status !== 'ACTIVE',
+                        'text-black': selectedAgent?.agentId === agent.agentId
+                      }">
+                  {{ agent.status === 'ACTIVE' ? 'robot_2' : 'smart_toy' }}
+                </span>
+                <div>
+                  <p class="font-comic text-lg">{{ agent.hostname }}</p>
+                  <p class="text-xs opacity-70">{{ agent.ipAddress }} · {{ agent.operatingSystem }}</p>
+                </div>
+              </div>
+              <div class="mt-2 inline-block px-2 py-0.5 text-xs font-bold rounded"
+                   [ngClass]="{
+                     'bg-primary text-black': agent.status === 'ACTIVE' && selectedAgent?.agentId !== agent.agentId,
+                     'bg-black text-primary': agent.status === 'ACTIVE' && selectedAgent?.agentId === agent.agentId,
+                     'bg-error text-white': agent.status !== 'ACTIVE'
+                   }">
+                {{ agent.status }}
+              </div>
+            </button>
+          }
+          @if (agents.length === 0) {
+            <div class="bg-card-dark p-6 rounded-xl neo-border text-center">
+              <span class="material-symbols-outlined text-4xl text-slate-500">search_off</span>
+              <p class="text-slate-400 mt-2 font-comic">NO AGENTS FOUND</p>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Telemetry Dashboard -->
+      <div class="lg:col-span-3 space-y-6">
+        @if (telemetryLoading && !latestReport) {
+          <div class="flex justify-center items-center py-20">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        } @else if (!latestReport) {
+          <div class="bg-card-dark p-12 rounded-xl neo-border shadow-neo text-center">
+            <span class="material-symbols-outlined text-6xl text-slate-500">monitoring</span>
+            <p class="text-slate-400 mt-4 font-comic text-2xl">NO TELEMETRY DATA</p>
+            <p class="text-slate-500 mt-2">Waiting for agent to send metrics...</p>
+          </div>
+        } @else {
+          <!-- Live Metrics Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <!-- CPU -->
+            <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-comic text-sm text-slate-400">CPU LOAD</span>
+                <span class="material-symbols-outlined" [ngClass]="cpuTone(latestReport.cpuUsage)">memory</span>
+              </div>
+              <p class="font-comic text-4xl" [ngClass]="cpuTone(latestReport.cpuUsage)">
+                {{ latestReport.cpuUsage | number:'1.1-1' }}%
+              </p>
+              <div class="mt-3 h-4 w-full bg-black rounded-full neo-border overflow-hidden">
+                <div class="h-full transition-all duration-500"
+                     [ngClass]="barColor(latestReport.cpuUsage)"
+                     [style.width]="barWidth(latestReport.cpuUsage)"></div>
+              </div>
+            </div>
+
+            <!-- RAM -->
+            <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-comic text-sm text-slate-400">RAM USAGE</span>
+                <span class="material-symbols-outlined" [ngClass]="ramTone(latestReport.ramUsedPercent)">storage</span>
+              </div>
+              <p class="font-comic text-4xl" [ngClass]="ramTone(latestReport.ramUsedPercent)">
+                {{ latestReport.ramUsedPercent | number:'1.1-1' }}%
+              </p>
+              <div class="mt-3 h-4 w-full bg-black rounded-full neo-border overflow-hidden">
+                <div class="h-full transition-all duration-500"
+                     [ngClass]="barColor(latestReport.ramUsedPercent)"
+                     [style.width]="barWidth(latestReport.ramUsedPercent)"></div>
+              </div>
+              <p class="text-xs text-slate-500 mt-2">Total: {{ latestReport.ramTotalMb }} MB</p>
+            </div>
+
+            <!-- Network Upload -->
+            <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-comic text-sm text-slate-400">UPLOAD</span>
+                <span class="material-symbols-outlined text-info">arrow_upward</span>
+              </div>
+              <p class="font-comic text-4xl text-info">
+                {{ formatBytes(latestReport.bytesSentSec) }}
+              </p>
+            </div>
+
+            <!-- Network Download -->
+            <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-comic text-sm text-slate-400">DOWNLOAD</span>
+                <span class="material-symbols-outlined text-secondary">arrow_downward</span>
+              </div>
+              <p class="font-comic text-4xl text-secondary">
+                {{ formatBytes(latestReport.bytesRecvSec) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Active Processes -->
+            <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+              <h3 class="font-comic text-2xl mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">terminal</span>
+                TOP PROCESSES
+              </h3>
+              @if (latestReport.processes && latestReport.processes.length > 0) {
+                <div class="overflow-x-auto">
+                  <table class="table table-sm w-full">
+                    <thead>
+                      <tr class="font-comic text-primary border-b border-primary/30">
+                        <th>PID</th>
+                        <th>Name</th>
+                        <th>CPU%</th>
+                        <th>User</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (proc of latestReport.processes; track proc.pid) {
+                        <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                          <td class="text-slate-400 font-mono text-xs">{{ proc.pid }}</td>
+                          <td class="font-medium">{{ proc.name }}</td>
+                          <td [ngClass]="cpuTone(proc.cpuUsage)">{{ proc.cpuUsage | number:'1.1-1' }}%</td>
+                          <td class="text-slate-400 text-xs">{{ proc.username }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p class="text-slate-500 text-center py-4">No process data available</p>
+              }
+            </div>
+
+            <!-- Network Connections -->
+            <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+              <h3 class="font-comic text-2xl mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-info">lan</span>
+                NETWORK CONNECTIONS
+              </h3>
+              @if (latestReport.networkConnections && latestReport.networkConnections.length > 0) {
+                <div class="space-y-3 max-h-64 overflow-y-auto">
+                  @for (conn of latestReport.networkConnections; track conn.pid + '-' + conn.remotePort) {
+                    <div class="bg-black/40 p-3 rounded-lg neo-border text-sm">
+                      <div class="flex justify-between items-center mb-1">
+                        <span class="font-comic text-primary">{{ conn.processName || 'Unknown' }}</span>
+                        <span class="px-2 py-0.5 rounded text-xs font-bold"
+                              [ngClass]="{
+                                'bg-primary text-black': conn.status === 'ESTABLISHED',
+                                'bg-warning text-black': conn.status === 'LISTEN',
+                                'bg-slate-600 text-white': conn.status !== 'ESTABLISHED' && conn.status !== 'LISTEN'
+                              }">
+                          {{ conn.status }}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                        <span>{{ conn.localAddress }}:{{ conn.localPort }}</span>
+                        <span class="material-symbols-outlined text-sm text-primary">arrow_forward</span>
+                        <span>{{ conn.remoteAddress }}:{{ conn.remotePort }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="text-slate-500 text-center py-4">No connection data available</p>
+              }
+            </div>
+          </div>
+
+          <!-- History Timeline -->
+          <div class="bg-card-dark p-6 rounded-xl neo-border shadow-neo">
+            <h3 class="font-comic text-2xl mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-warning">timeline</span>
+              METRICS HISTORY (Last Hour)
+            </h3>
+            @if (historyReports.length > 0) {
+              <div class="overflow-x-auto">
+                <table class="table table-sm w-full">
+                  <thead>
+                    <tr class="font-comic text-primary border-b border-primary/30">
+                      <th>Time</th>
+                      <th>CPU</th>
+                      <th>RAM</th>
+                      <th>Upload</th>
+                      <th>Download</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (report of historyReports; track report.id) {
+                      <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                        <td class="text-slate-400 text-xs font-mono">{{ report.receivedAt | date:'HH:mm:ss' }}</td>
+                        <td [ngClass]="cpuTone(report.cpuUsage)">{{ report.cpuUsage | number:'1.1-1' }}%</td>
+                        <td [ngClass]="ramTone(report.ramUsedPercent)">{{ report.ramUsedPercent | number:'1.1-1' }}%</td>
+                        <td class="text-info text-xs">{{ formatBytes(report.bytesSentSec) }}</td>
+                        <td class="text-secondary text-xs">{{ formatBytes(report.bytesRecvSec) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="text-slate-500 text-center py-4">No history data available</p>
+            }
+          </div>
+
+          <!-- Last Update -->
+          <div class="text-center text-xs text-slate-500">
+            <span class="material-symbols-outlined text-sm align-middle">schedule</span>
+            Last update: {{ latestReport.receivedAt | date:'medium' }} · Auto-refreshing every 10s
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>

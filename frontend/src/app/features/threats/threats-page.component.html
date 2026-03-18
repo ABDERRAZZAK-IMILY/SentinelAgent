@@ -1,0 +1,297 @@
+<section class="flex flex-col gap-8">
+  <div class="rounded-[2rem] border border-primary/20 bg-[radial-gradient(circle_at_top_left,_rgba(56,255,20,0.16),_transparent_45%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] p-8 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div class="space-y-3">
+        <p class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-[0.35em] text-primary">
+          <span class="size-2 rounded-full bg-primary animate-pulse"></span>
+          Live Security Feed - {{ sectorCode }}
+        </p>
+        <div>
+          <h1 class="text-5xl font-comic uppercase tracking-tight text-white md:text-7xl">Threat Chronicles</h1>
+          <p class="mt-2 max-w-2xl text-sm font-medium uppercase tracking-[0.22em] text-slate-400">
+            Sentinel AI monitors active incidents, refreshes the tactical board every 15 seconds, and escalates fresh critical activity to desktop notifications.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
+          <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Feed Status</p>
+          <div class="mt-2 flex items-center gap-2 text-lg font-black text-white">
+            <span class="size-3 rounded-full"
+                  [class.bg-primary]="liveStatus === 'Live'"
+                  [class.animate-pulse]="liveStatus === 'Live'"
+                  [class.bg-warning]="liveStatus === 'Connecting' || liveStatus === 'Streaming'"
+                  [class.bg-comic-red]="liveStatus === 'Degraded'"></span>
+            {{ liveStatus }}
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Last refresh {{ lastRefreshLabel }}</p>
+        </div>
+
+        <div class="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
+          <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Desktop Alerts</p>
+          <p class="mt-2 text-lg font-black text-white">{{ notificationPermission | uppercase }}</p>
+          <button class="mt-3 rounded-full border border-primary/40 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-primary transition hover:border-primary hover:bg-primary hover:text-black"
+                  type="button"
+                  (click)="requestNotificationPermission()"
+                  [disabled]="notificationPermission === 'granted' || notificationPermission === 'unsupported'">
+            Enable Critical Notifications
+          </button>
+        </div>
+      </div>
+    </div>
+
+    @if (criticalBanner) {
+      <div class="mt-6 flex items-start gap-3 rounded-2xl border border-comic-red/40 bg-comic-red/10 px-5 py-4 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]">
+        <span class="material-symbols-outlined text-comic-red">warning</span>
+        <div>
+          <p class="font-black uppercase tracking-[0.24em] text-comic-red">Critical escalation</p>
+          <p class="mt-1 text-slate-200">{{ criticalBanner }}</p>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (stats) {
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      <div class="rounded-2xl border border-comic-red/30 bg-comic-red/10 p-4 text-center">
+        <p class="font-comic text-3xl text-comic-red">{{ stats.CRITICAL }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-comic-red/70">Critical</p>
+      </div>
+      <div class="rounded-2xl border border-orange-400/30 bg-orange-500/10 p-4 text-center">
+        <p class="font-comic text-3xl text-orange-400">{{ stats.HIGH }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-orange-300/70">High</p>
+      </div>
+      <div class="rounded-2xl border border-yellow-300/30 bg-comic-yellow/10 p-4 text-center">
+        <p class="font-comic text-3xl text-comic-yellow">{{ stats.MEDIUM }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-comic-yellow/70">Medium</p>
+      </div>
+      <div class="rounded-2xl border border-sky-300/30 bg-info/10 p-4 text-center">
+        <p class="font-comic text-3xl text-info">{{ stats.LOW }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-info/70">Low</p>
+      </div>
+      <div class="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-center">
+        <p class="font-comic text-3xl text-primary">{{ stats.NEW }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-primary/70">New</p>
+      </div>
+      <div class="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-center">
+        <p class="font-comic text-3xl text-warning">{{ stats.REVIEWED }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-warning/70">Reviewed</p>
+      </div>
+      <div class="rounded-2xl border border-success/30 bg-success/10 p-4 text-center">
+        <p class="font-comic text-3xl text-success">{{ stats.RESOLVED }}</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.28em] text-success/70">Resolved</p>
+      </div>
+    </div>
+  }
+
+  <div class="grid gap-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">
+    <div class="space-y-6">
+      <div class="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <label class="flex flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
+          <span class="material-symbols-outlined text-primary">travel_explore</span>
+          <input class="w-full bg-transparent text-sm font-semibold tracking-[0.18em] text-white outline-none placeholder:text-slate-500"
+                 type="text"
+                 placeholder="Search threat type, source, status"
+                 [(ngModel)]="searchTerm"
+                 (ngModelChange)="onSearchTermChange()" />
+        </label>
+
+        <div class="flex gap-3 overflow-x-auto pb-1">
+          @for (filter of filters; track filter) {
+            <button class="rounded-full border px-5 py-2 text-xs font-black uppercase tracking-[0.24em] transition-colors"
+                    [ngClass]="{
+                      'border-primary bg-primary text-black': activeFilter === filter,
+                      'border-slate-700 bg-slate-800 text-slate-300': activeFilter !== filter,
+                      'text-comic-red': filter === 'Critical' && activeFilter !== filter,
+                      'text-comic-yellow': filter === 'Warning' && activeFilter !== filter,
+                      'text-success': filter === 'Resolved' && activeFilter !== filter
+                    }"
+                    type="button"
+                    (click)="applyFilter(filter)">
+              {{ filter }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="relative flex flex-col gap-6 before:absolute before:bottom-0 before:left-6 before:top-0 before:w-px before:bg-gradient-to-b before:from-primary/0 before:via-primary/30 before:to-primary/0">
+        @if (loading) {
+          <div class="rounded-3xl border border-white/10 bg-slate-900/60 p-8 text-center text-slate-400">
+            Loading live incident feed...
+          </div>
+        }
+
+        @for (log of threatLogs; track log.alertId) {
+          <article class="relative ml-14 rounded-[1.75rem] border border-white/10 bg-slate-900/75 p-6 shadow-[0_18px_50px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-1">
+            <div class="absolute -left-14 top-8 flex size-10 items-center justify-center rounded-full border-4 border-slate-950 text-black"
+                 [class.bg-comic-red]="log.level === 'critical'"
+                 [class.bg-comic-yellow]="log.level === 'warning'"
+                 [class.bg-success]="log.level === 'resolved'">
+              <span class="material-symbols-outlined text-lg">
+                {{ log.level === 'critical' ? 'notifications_active' : (log.level === 'warning' ? 'bolt' : 'check_circle') }}
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div class="space-y-4">
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em]"
+                        [ngClass]="{
+                          'bg-comic-red text-white': log.level === 'critical',
+                          'bg-comic-yellow text-black': log.level === 'warning',
+                          'bg-success text-black': log.level === 'resolved'
+                        }">
+                    {{ log.level }}
+                  </span>
+                  <span class="text-xs font-black uppercase tracking-[0.28em] text-slate-500">{{ log.time }}</span>
+                  <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{{ log.status }}</span>
+                </div>
+
+                <div>
+                  <h3 class="text-2xl font-black uppercase text-white">{{ log.title }}</h3>
+                  <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-300">{{ log.details }}</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  @for (tag of log.tags; track tag) {
+                    <span class="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-300">{{ tag }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="flex shrink-0 flex-wrap gap-3 lg:w-[240px] lg:flex-col">
+                <button class="rounded-full border border-primary/40 bg-primary px-5 py-3 text-xs font-black uppercase tracking-[0.22em] text-black transition hover:bg-white"
+                        type="button"
+                        (click)="viewDetail(log)">
+                  {{ log.actionLabel }}
+                </button>
+                @if (log.status !== 'RESOLVED') {
+                  <button class="rounded-full border border-success/30 bg-success/90 px-5 py-3 text-xs font-black uppercase tracking-[0.22em] text-black transition hover:bg-success"
+                          type="button"
+                          (click)="updateAlertStatus(log.alertId, 'RESOLVED')">
+                    Resolve Alert
+                  </button>
+                }
+                @if (log.status === 'NEW') {
+                  <button class="rounded-full border border-warning/30 bg-warning px-5 py-3 text-xs font-black uppercase tracking-[0.22em] text-black transition hover:bg-yellow-300"
+                          type="button"
+                          (click)="updateAlertStatus(log.alertId, 'REVIEWED')">
+                    Mark Reviewed
+                  </button>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+
+      @if (!loading && threatLogs.length === 0) {
+        <div class="rounded-3xl border border-white/10 bg-slate-900/60 p-10 text-center">
+          <span class="material-symbols-outlined text-6xl text-slate-600">shield</span>
+          <p class="mt-4 font-comic text-3xl text-slate-400">Sector 7G is clear</p>
+          <p class="mt-2 text-sm text-slate-500">No threats match the current search and filter combination.</p>
+        </div>
+      }
+    </div>
+
+    <aside class="space-y-6">
+      <section class="rounded-[1.75rem] border border-primary/20 bg-primary/10 p-6 shadow-[0_18px_60px_rgba(56,255,20,0.08)]">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-[11px] font-black uppercase tracking-[0.3em] text-primary/70">LLM AI Briefing</p>
+            <h2 class="mt-2 text-2xl font-black uppercase text-white">Sector 7G Outlook</h2>
+          </div>
+          @if (aiBusy) {
+            <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+          }
+        </div>
+        <p class="mt-4 text-sm leading-7 text-slate-200">{{ aiBriefing }}</p>
+      </section>
+
+      <section class="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
+        <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Response Matrix</p>
+        <div class="mt-5 space-y-4">
+          <div class="rounded-2xl border border-comic-red/20 bg-comic-red/10 p-4">
+            <p class="text-xs font-black uppercase tracking-[0.22em] text-comic-red">Critical</p>
+            <p class="mt-2 text-sm text-slate-200">Desktop notification, modal investigation, and immediate operator action.</p>
+          </div>
+          <div class="rounded-2xl border border-warning/20 bg-warning/10 p-4">
+            <p class="text-xs font-black uppercase tracking-[0.22em] text-warning">High / Medium</p>
+            <p class="mt-2 text-sm text-slate-200">Triage in-feed, mark reviewed, and track status changes in real time.</p>
+          </div>
+          <div class="rounded-2xl border border-success/20 bg-success/10 p-4">
+            <p class="text-xs font-black uppercase tracking-[0.22em] text-success">Resolved</p>
+            <p class="mt-2 text-sm text-slate-200">Remains visible in the feed as an incident record for audit trail continuity.</p>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</section>
+
+@if (detailOpen && selectedAlert) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" (click)="closeDetail()">
+    <div class="w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900 p-8 shadow-[0_30px_90px_rgba(0,0,0,0.45)]" (click)="$event.stopPropagation()">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[11px] font-black uppercase tracking-[0.3em] text-primary/70">Alert Detail</p>
+          <h3 class="mt-2 text-3xl font-black uppercase text-white">{{ selectedAlert.threatType }}</h3>
+        </div>
+        <button class="text-slate-400 transition hover:text-white" type="button" (click)="closeDetail()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="mt-6 space-y-4 text-sm">
+        <div class="flex justify-between gap-4">
+          <span class="font-black uppercase tracking-[0.2em] text-slate-500">ID</span>
+          <span class="font-mono text-slate-200">{{ selectedAlert.id }}</span>
+        </div>
+        <div class="flex justify-between gap-4">
+          <span class="font-black uppercase tracking-[0.2em] text-slate-500">Severity</span>
+          <span class="font-black text-white">{{ selectedAlert.severity }}</span>
+        </div>
+        <div class="flex justify-between gap-4">
+          <span class="font-black uppercase tracking-[0.2em] text-slate-500">Status</span>
+          <span class="font-black text-white">{{ selectedAlert.status }}</span>
+        </div>
+        <div class="flex justify-between gap-4">
+          <span class="font-black uppercase tracking-[0.2em] text-slate-500">Source Agent</span>
+          <span class="font-mono text-slate-200">{{ selectedAlert.sourceAgentId || 'Unknown' }}</span>
+        </div>
+        <div>
+          <p class="font-black uppercase tracking-[0.2em] text-slate-500">Description</p>
+          <p class="mt-2 leading-7 text-slate-300">{{ selectedAlert.description }}</p>
+        </div>
+        @if (selectedAlert.recommendation) {
+          <div>
+            <p class="font-black uppercase tracking-[0.2em] text-slate-500">Recommendation</p>
+            <p class="mt-2 leading-7 text-primary">{{ selectedAlert.recommendation }}</p>
+          </div>
+        }
+        <div class="flex justify-between gap-4">
+          <span class="font-black uppercase tracking-[0.2em] text-slate-500">Timestamp</span>
+          <span class="text-slate-200">{{ selectedAlert.timestamp }}</span>
+        </div>
+      </div>
+
+      @if (selectedAlert.status !== 'RESOLVED') {
+        <div class="mt-8 flex flex-wrap gap-3 border-t border-white/10 pt-5">
+          @if (selectedAlert.status === 'NEW') {
+            <button class="flex-1 rounded-full border border-warning/30 bg-warning px-5 py-3 text-xs font-black uppercase tracking-[0.24em] text-black transition hover:bg-yellow-300"
+                    type="button"
+                    (click)="updateAlertStatus(selectedAlert.id, 'REVIEWED')">
+              Mark Reviewed
+            </button>
+          }
+          <button class="flex-1 rounded-full border border-success/30 bg-success/90 px-5 py-3 text-xs font-black uppercase tracking-[0.24em] text-black transition hover:bg-success"
+                  type="button"
+                  (click)="updateAlertStatus(selectedAlert.id, 'RESOLVED')">
+            Resolve Alert
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
