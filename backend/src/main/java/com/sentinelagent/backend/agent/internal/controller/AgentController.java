@@ -45,12 +45,12 @@ public class AgentController {
     }
 
     @GetMapping("/{agentId}")
-    public ResponseEntity<AgentDetailsDto> getAgentById(@PathVariable String agentId) {
+    public ResponseEntity<AgentDetailsDto> getAgentById(@PathVariable("agentId") String agentId) {
         return ResponseEntity.ok(agentService.getById(agentId));
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<AgentDetailsDto>> getAgentsByStatus(@PathVariable String status) {
+    public ResponseEntity<List<AgentDetailsDto>> getAgentsByStatus(@PathVariable("status") String status) {
         return ResponseEntity.ok(agentService.getAgentsByStatus(status));
     }
 
@@ -61,7 +61,7 @@ public class AgentController {
 
     @PostMapping("/{agentId}/commands")
     public ResponseEntity<Void> sendCommand(
-            @PathVariable String agentId,
+            @PathVariable("agentId") String agentId,
             @RequestBody SendCommandRequest request) {
         commandService.issueCommand(agentId, request);
         return ResponseEntity.accepted().build();
@@ -69,15 +69,15 @@ public class AgentController {
 
     @GetMapping("/{agentId}/commands/pending")
     public ResponseEntity<List<AgentCommandDocument>> getPendingCommands(
-            @PathVariable String agentId,
+            @PathVariable("agentId") String agentId,
             @RequestHeader("X-Agent-Key") String apiKey) {
         return ResponseEntity.ok(commandService.getPendingCommands(agentId, apiKey));
     }
 
     @PutMapping("/{agentId}/commands/{commandId}/result")
     public ResponseEntity<AgentCommandDocument> updateCommandResult(
-            @PathVariable String agentId,
-            @PathVariable String commandId,
+            @PathVariable("agentId") String agentId,
+            @PathVariable("commandId") String commandId,
             @RequestHeader("X-Agent-Key") String apiKey,
             @RequestBody AgentCommandResultRequest request) {
         AgentCommandDocument updated = commandService.updateCommandResult(agentId, commandId, apiKey, request);
@@ -85,7 +85,7 @@ public class AgentController {
     }
 
     @GetMapping("/{agentId}/commands/history")
-    public ResponseEntity<List<AgentCommandDocument>> getCommandHistory(@PathVariable String agentId) {
+    public ResponseEntity<List<AgentCommandDocument>> getCommandHistory(@PathVariable("agentId") String agentId) {
         return ResponseEntity.ok(commandService.getCommandHistory(agentId));
     }
 }
