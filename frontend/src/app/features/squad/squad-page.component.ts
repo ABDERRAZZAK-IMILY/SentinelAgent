@@ -1,11 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AgentService } from '../../core/services/agent.service';
-import { AgentCommand, Alert } from '../../core/models/api.models';
+import { AgentCommand, Alert, AgentDetails } from '../../core/models/api.models';
 import { TelemetryService } from '../../core/services/telemetry.service';
 import { AlertService } from '../../core/services/alert.service';
 import { AgentCard } from '../../core/models/view.model';
+import { Store } from '@ngrx/store';
+import { AgentActions } from '../../store/agents/agents.actions';
+import { selectAllAgents } from '../../store/agents/agents.selectors';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-squad-page',
@@ -15,6 +19,7 @@ import { AgentCard } from '../../core/models/view.model';
   styleUrl: './squad-page.component.css',
 })
 export class SquadPageComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   protected agents: (AgentCard & { agentId: string })[] = [];
   protected alerts: Alert[] = [];
   protected selectedAgentId: string | null = null;
@@ -29,38 +34,32 @@ export class SquadPageComponent implements OnInit {
   protected actionSubmitting = false;
 
   constructor(
+    private readonly store: Store,
     private readonly agentService: AgentService,
     private readonly telemetryService: TelemetryService,
     private readonly alertService: AlertService,
   ) {}
 
   ngOnInit() {
-    this.agentService.getAll().subscribe((backendAgents) => {
-      this.agents = backendAgents.map((a) => {
-        let uiStatus: 'Online' | 'Standby' | 'Alert' = 'Standby';
-        if (a.status === 'ERROR') uiStatus = 'Alert';
-        else if (a.status === 'ACTIVE') uiStatus = 'Online';
+    this.store.dispatch(AgentActions.loadAgents());
+    this.store.dispatch(AgentActions.loadStats());
 
-        return {
-          agentId: a.agentId,
-          name: a.hostname,
-          code: a.agentId,
-          status: uiStatus,
-          mission: a.operatingSystem + ' / ' + a.ipAddress,
-          cpu: 0,
-          ram: 0,
-        };
-      });
+    this.store.select(selectAllAgents).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((backendAgents) => {
+      this.agents = backendAgents.map((agent) => this.toAgentCard(agent));
 
       // Load latest telemetry for each agent
-      for (const agent of this.agents) {
-        this.telemetryService.getLatest(agent.agentId).subscribe({
+      for (const squadAgent of this.agents) {
+        this.telemetryService.getLatest(squadAgent.agentId).subscribe({
           next: (report) => {
-            const a = this.agents.find((x) => x.agentId === agent.agentId);
-            if (a) {
-              (a as any).cpu = Math.round(report.cpuUsage);
-              (a as any).ram = Math.round(report.ramUsedPercent);
-            }
+            this.agents = this.agents.map((agent) =>
+              agent.agentId === squadAgent.agentId
+                ? {
+                    ...agent,
+                    cpu: Math.round(report.cpuUsage),
+                    ram: Math.round(report.ramUsedPercent),
+                  }
+                : agent,
+            );
           },
           error: () => {},
         });
@@ -156,5 +155,21 @@ export class SquadPageComponent implements OnInit {
     this.agentService.getCommandHistory(agentId).subscribe((history) => {
       this.commandHistory = history;
     });
+  }
+
+  private toAgentCard(agent: AgentDetails): AgentCard & { agentId: string } {
+    let uiStatus: 'Online' | 'Standby' | 'Alert' = 'Standby';
+    if (agent.status === 'ERROR') uiStatus = 'Alert';
+    else if (agent.status === 'ACTIVE') uiStatus = 'Online';
+
+    return {
+      agentId: agent.agentId,
+      name: agent.hostname,
+      code: agent.agentId,
+      status: uiStatus,
+      mission: agent.operatingSystem + ' / ' + agent.ipAddress,
+      cpu: 0,
+      ram: 0,
+    };
   }
 }
