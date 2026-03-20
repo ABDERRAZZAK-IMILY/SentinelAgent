@@ -1,7 +1,7 @@
 <section class="space-y-6">
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h2 class="font-comic text-5xl text-primary tracking-wider">DYNAMIC SETTINGS</h2>
+      <h2 class="font-comic text-5xl text-primary tracking-wider">SETTINGS</h2>
       <p class="text-slate-400 font-bold uppercase tracking-wider">Live backend status and persisted UI preferences</p>
     </div>
     <div class="rounded-lg border border-black bg-slate-900/60 px-4 py-2 text-xs uppercase font-bold text-slate-300">
@@ -57,90 +57,7 @@
         </div>
       </div>
     </section>
-
-    <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
-      <h3 class="font-comic text-2xl uppercase">Profile & UI</h3>
-
-      <div>
-        <label class="text-xs font-bold uppercase text-slate-400">Alias</label>
-        <input [(ngModel)]="preferences.alias" class="mt-1 w-full bg-slate-800 border-2 border-black rounded-lg px-3 py-2 text-white font-bold focus:border-primary focus:outline-none" placeholder="Display alias" type="text" />
-      </div>
-
-      <div>
-        <p class="text-xs font-bold uppercase text-slate-400">Theme</p>
-        <div class="mt-2 flex flex-wrap gap-2">
-          @for (theme of themeOptions; track trackByText($index, theme)) {
-            <button class="px-3 py-1 border-2 rounded text-xs font-black uppercase" [ngClass]="preferences.theme === theme ? 'bg-primary text-black border-primary' : 'bg-slate-900/60 text-slate-200 border-black'" (click)="preferences.theme = theme">
-              {{ theme }}
-            </button>
-          }
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-bold uppercase text-slate-400">Notification Sound</p>
-        <div class="mt-2 flex flex-wrap gap-2">
-          @for (sound of soundOptions; track trackByText($index, sound)) {
-            <button class="px-3 py-1 border-2 rounded text-xs font-black uppercase" [ngClass]="preferences.sound === sound ? 'bg-info text-black border-info' : 'bg-slate-900/60 text-slate-200 border-black'" (click)="preferences.sound = sound">
-              {{ sound }}
-            </button>
-          }
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-bold uppercase text-slate-400">Auto Refresh</p>
-        <div class="mt-2 flex flex-wrap gap-2">
-          @for (seconds of refreshOptions; track trackByText($index, seconds)) {
-            <button class="px-3 py-1 border-2 rounded text-xs font-black" [ngClass]="preferences.autoRefreshSeconds === seconds ? 'bg-success text-black border-success' : 'bg-slate-900/60 text-slate-200 border-black'" (click)="preferences.autoRefreshSeconds = seconds">
-              {{ seconds }}s
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="rounded-lg border border-black bg-black/20 p-3 text-sm">
-        <p class="text-[10px] uppercase text-slate-400">Desktop Notifications</p>
-        <p class="font-bold mt-1">{{ preferences.desktopNotifications ? 'Enabled' : 'Disabled' }}</p>
-        <p class="text-xs text-slate-400">Browser permission: {{ notificationPermissionLabel() }}</p>
-        <button class="mt-3 border-2 px-3 py-1 rounded text-xs font-black uppercase" [ngClass]="preferences.desktopNotifications ? 'bg-error text-white border-error' : 'bg-primary text-black border-primary'" (click)="toggleDesktopNotifications()">
-          {{ preferences.desktopNotifications ? 'Disable' : 'Enable' }}
-        </button>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2">
-        <button class="bg-primary text-black py-2 neo-brutal-sm font-black text-xs uppercase" (click)="savePreferences()">Save</button>
-        <button class="bg-slate-200 text-black py-2 neo-brutal-sm font-black text-xs uppercase" (click)="resetDefaults()">Reset</button>
-      </div>
-    </section>
-  </div>
-
-  <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
-    <div class="flex items-center justify-between">
-      <h3 class="font-comic text-2xl uppercase">Local Security Policies</h3>
-      <span class="text-xs uppercase text-slate-400">{{ securitySettings.length }} items</span>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      @for (setting of securitySettings; track trackBySetting($index, setting)) {
-        <div class="rounded-lg border p-4" [ngClass]="setting.enabled ? 'border-success/50 bg-success/10' : 'border-black bg-black/20'">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="font-bold uppercase text-sm">{{ setting.label }}</p>
-              <p class="text-xs text-slate-400 mt-1">{{ setting.description }}</p>
-            </div>
-            <button class="border-2 rounded px-2 py-1 text-[10px] font-black uppercase"
-                    [ngClass]="setting.enabled ? 'border-success text-success' : 'border-slate-400 text-slate-300'"
-                    (click)="toggleSecurity(setting)">
-              {{ setting.enabled ? 'On' : 'Off' }}
-            </button>
-          </div>
-        </div>
-      }
-    </div>
-  </section>
-
-  <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
+ <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
     <div class="flex items-center justify-between">
       <h3 class="font-comic text-2xl uppercase">User Management</h3>
       <button class="bg-primary text-black px-4 py-2 neo-brutal-sm font-black text-xs uppercase" (click)="toggleCreateForm()">
@@ -182,4 +99,33 @@
       }
     </div>
   </section>
+  
+  </div>
+
+  <section class="bg-[#1b2a3d] p-6 neo-brutal rounded-xl space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="font-comic text-2xl uppercase">Local Security Policies</h3>
+      <span class="text-xs uppercase text-slate-400">{{ securitySettings.length }} items</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      @for (setting of securitySettings; track trackBySetting($index, setting)) {
+        <div class="rounded-lg border p-4" [ngClass]="setting.enabled ? 'border-success/50 bg-success/10' : 'border-black bg-black/20'">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-bold uppercase text-sm">{{ setting.label }}</p>
+              <p class="text-xs text-slate-400 mt-1">{{ setting.description }}</p>
+            </div>
+            <button class="border-2 rounded px-2 py-1 text-[10px] font-black uppercase"
+                    [ngClass]="setting.enabled ? 'border-success text-success' : 'border-slate-400 text-slate-300'"
+                    (click)="toggleSecurity(setting)">
+              {{ setting.enabled ? 'On' : 'Off' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+ 
 </section>

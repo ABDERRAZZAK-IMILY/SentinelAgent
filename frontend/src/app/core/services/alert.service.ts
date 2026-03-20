@@ -17,10 +17,6 @@ export class AlertService {
     return this.http.get<Alert[]>(this.baseUrl, { params });
   }
 
-  getById(id: string): Observable<Alert> {
-    return this.http.get<Alert>(`${this.baseUrl}/${id}`);
-  }
-
   updateStatus(id: string, status: string): Observable<Alert> {
     return this.http.put<Alert>(`${this.baseUrl}/${id}/status`, null, {
       params: { status },

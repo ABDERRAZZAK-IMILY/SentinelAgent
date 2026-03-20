@@ -14,14 +14,6 @@ export class AgentService {
     return this.http.get<AgentDetails[]>(this.baseUrl);
   }
 
-  getById(id: string): Observable<AgentDetails> {
-    return this.http.get<AgentDetails>(`${this.baseUrl}/${id}`);
-  }
-
-  getByStatus(status: string): Observable<AgentDetails[]> {
-    return this.http.get<AgentDetails[]>(`${this.baseUrl}/status/${status}`);
-  }
-
   getStats(): Observable<AgentStats> {
     return this.http.get<AgentStats>(`${this.baseUrl}/stats`);
   }

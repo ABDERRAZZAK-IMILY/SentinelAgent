@@ -19,8 +19,8 @@ public class TelemetryController {
 
     @GetMapping("/agents/{agentId}/history")
     public ResponseEntity<List<TelemetryResponse>> getHistoricalMetrics(
-            @PathVariable String agentId,
-            @RequestParam(defaultValue = "1") int hoursBack) {
+            @PathVariable("agentId") String agentId,
+            @RequestParam(name = "hoursBack", defaultValue = "1") int hoursBack) {
 
         LocalDateTime end = LocalDateTime.now();
         LocalDateTime start = end.minusHours(hoursBack);
@@ -31,7 +31,7 @@ public class TelemetryController {
     }
 
     @GetMapping("/agents/{agentId}/latest")
-    public ResponseEntity<TelemetryResponse> getLatestMetrics(@PathVariable String agentId) {
+    public ResponseEntity<TelemetryResponse> getLatestMetrics(@PathVariable("agentId") String agentId) {
         return telemetryService.getLatest(agentId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -39,8 +39,8 @@ public class TelemetryController {
 
     @GetMapping("/agents/{agentId}/ai-summary")
     public ResponseEntity<TelemetryAiSummaryResponse> getAiSummary(
-            @PathVariable String agentId,
-            @RequestParam(defaultValue = "6") int hoursBack) {
+            @PathVariable("agentId") String agentId,
+            @RequestParam(name = "hoursBack", defaultValue = "6") int hoursBack) {
 
         LocalDateTime end = LocalDateTime.now();
         LocalDateTime start = end.minusHours(Math.max(hoursBack, 1));

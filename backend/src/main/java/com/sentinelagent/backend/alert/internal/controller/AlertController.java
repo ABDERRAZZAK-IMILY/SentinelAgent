@@ -19,13 +19,13 @@ public class AlertController {
 
     @GetMapping
     public ResponseEntity<List<AlertDocument>> getAllAlerts(
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String severity) {
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "severity", required = false) String severity) {
         return ResponseEntity.ok(alertService.getAlerts(status, severity));
     }
 
     @GetMapping("/{alertId}")
-    public ResponseEntity<AlertDocument> getAlertById(@PathVariable String alertId) {
+    public ResponseEntity<AlertDocument> getAlertById(@PathVariable("alertId") String alertId) {
         return alertService.getById(alertId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -33,8 +33,8 @@ public class AlertController {
 
     @PutMapping("/{alertId}/status")
     public ResponseEntity<AlertDocument> updateAlertStatus(
-            @PathVariable String alertId,
-            @RequestParam String status) {
+            @PathVariable("alertId") String alertId,
+            @RequestParam(name = "status") String status) {
         AlertDocument updated = alertService.updateStatus(alertId, status);
         if (updated == null) {
             return ResponseEntity.notFound().build();

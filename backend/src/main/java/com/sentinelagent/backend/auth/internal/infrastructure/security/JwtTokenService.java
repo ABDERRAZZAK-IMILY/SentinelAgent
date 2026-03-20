@@ -3,8 +3,8 @@ package com.sentinelagent.backend.auth.internal.infrastructure.security;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.sentinelagent.backend.auth.TokenService;
-import com.sentinelagent.backend.auth.TokenValidationService;
+import com.sentinelagent.backend.auth.api.TokenService;
+import com.sentinelagent.backend.auth.api.TokenValidationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 

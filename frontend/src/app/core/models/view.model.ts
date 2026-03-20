@@ -11,19 +11,6 @@ export interface ChatMessage {
   readonly timestamp: string;
 }
 
-export interface ReportCard {
-  readonly title: string;
-  readonly summary: string;
-  readonly confidence: number;
-  readonly severity: 'success' | 'warning' | 'error';
-}
-
-export interface NetworkNode {
-  readonly name: string;
-  readonly status: string;
-  readonly tone: 'success' | 'warning' | 'error' | 'neutral';
-}
-
 export interface AgentCard {
   readonly name: string;
   readonly code: string;
@@ -40,12 +27,6 @@ export interface ThreatLog {
   readonly time: string;
   readonly tags: readonly string[];
   readonly actionLabel: string;
-}
-
-export interface ToggleSetting {
-  readonly label: string;
-  readonly description: string;
-  readonly enabled: boolean;
 }
 
 export interface QuickLink {
@@ -66,14 +47,4 @@ export interface SentinelUnit {
   readonly summary: string;
   readonly status: 'Nominal' | 'Watch';
   readonly zone: string;
-}
-
-export interface SectorLoad {
-  readonly name: string;
-  readonly load: number;
-}
-
-export interface ThemeOption {
-  readonly name: string;
-  readonly active: boolean;
 }
