@@ -3,9 +3,3 @@ export interface NavItem {
   readonly route: string;
   readonly icon: string;
 }
-
-export interface StatusMetric {
-  readonly label: string;
-  readonly value: string;
-  readonly tone?: 'success' | 'warning' | 'error' | 'neutral';
-}
