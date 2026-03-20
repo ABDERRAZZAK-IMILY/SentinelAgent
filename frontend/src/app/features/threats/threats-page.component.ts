@@ -2,12 +2,14 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NgClass, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ThreatLog } from '../../core/models/view.model';
-import { AlertService } from '../../core/services/alert.service';
 import { Alert, AlertStats } from '../../core/models/api.models';
 import { AiService } from '../../core/services/ai.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { catchError, forkJoin, interval, of, switchMap, tap } from 'rxjs';
+import { catchError, interval, of, tap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Store } from '@ngrx/store';
+import { AlertActions } from '../../store/alerts/alerts.actions';
+import { selectAlertStats, selectAlertsError, selectAlertsLoading, selectAllAlerts } from '../../store/alerts/alerts.selectors';
 
 type ThreatFilter = 'All Logs' | 'Critical' | 'Warning' | 'Resolved';
 type ThreatFeedItem = ThreatLog & { alertId: string; timestamp: string; severity: string; status: string; sourceAgentId: string | null };
@@ -42,7 +44,7 @@ export class ThreatsPageComponent implements OnInit {
   protected readonly refreshIntervalMs = 15000;
 
   constructor(
-    private readonly alertService: AlertService,
+    private readonly store: Store,
     private readonly aiService: AiService,
     private readonly notificationService: NotificationService,
   ) {}
@@ -53,18 +55,64 @@ export class ThreatsPageComponent implements OnInit {
       this.notificationPermission = permission;
     });
 
+    this.store
+      .select(selectAllAlerts)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((alerts) => {
+        if (alerts.length === 0) {
+          return;
+        }
+
+        this.loading = false;
+        this.liveStatus = 'Live';
+        this.lastRefreshLabel = new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        this.processAlertFeed(alerts);
+
+        if (this.selectedAlert) {
+          this.selectedAlert = alerts.find((alert) => alert.id === this.selectedAlert?.id) ?? null;
+        }
+      });
+
+    this.store
+      .select(selectAlertStats)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((stats) => {
+        this.stats = stats;
+      });
+
+    this.store
+      .select(selectAlertsLoading)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((loading) => {
+        this.loading = loading;
+      });
+
+    this.store
+      .select(selectAlertsError)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((error) => {
+        if (!error) {
+          return;
+        }
+        this.loading = false;
+        this.liveStatus = 'Degraded';
+        this.aiBriefing = 'Feed degraded. Sentinel AI could not refresh the latest alert context.';
+      });
+
+    this.triggerRefresh();
+
     interval(this.refreshIntervalMs)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         tap(() => {
           this.liveStatus = 'Streaming';
         }),
-        switchMap(() => this.loadFeed()),
+        tap(() => this.triggerRefresh()),
       )
-      .subscribe();
-
-    this.loadFeed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();
   }
 
@@ -91,13 +139,8 @@ export class ThreatsPageComponent implements OnInit {
   }
 
   protected updateAlertStatus(alertId: string, status: string): void {
-    this.alertService.updateStatus(alertId, status).subscribe((updated) => {
-      const idx = this.allAlerts.findIndex((a) => a.id === updated.id);
-      if (idx >= 0) this.allAlerts[idx] = updated;
-      this.applyFilter(this.activeFilter);
-      this.alertService.getStats().subscribe((s) => (this.stats = s));
-      if (this.selectedAlert?.id === updated.id) this.selectedAlert = updated;
-    });
+    this.store.dispatch(AlertActions.updateAlertStatus({ id: alertId, status }));
+    this.store.dispatch(AlertActions.loadAlertStats());
   }
 
   protected requestNotificationPermission(): void {
@@ -106,29 +149,9 @@ export class ThreatsPageComponent implements OnInit {
     });
   }
 
-  private loadFeed() {
-    return forkJoin({
-      alerts: this.alertService.getAll(),
-      stats: this.alertService.getStats(),
-    }).pipe(
-      tap(({ alerts, stats }) => {
-        this.loading = false;
-        this.liveStatus = 'Live';
-        this.lastRefreshLabel = new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
-        this.stats = stats;
-        this.processAlertFeed(alerts);
-      }),
-      catchError(() => {
-        this.loading = false;
-        this.liveStatus = 'Degraded';
-        this.aiBriefing = 'Feed degraded. Sentinel AI could not refresh the latest alert context.';
-        return of(null);
-      }),
-    );
+  private triggerRefresh(): void {
+    this.store.dispatch(AlertActions.loadAlerts({}));
+    this.store.dispatch(AlertActions.loadAlertStats());
   }
 
   private processAlertFeed(alerts: Alert[]): void {
