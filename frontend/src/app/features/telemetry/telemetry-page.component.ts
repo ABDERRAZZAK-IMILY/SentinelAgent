@@ -1,9 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NgClass, DecimalPipe, DatePipe } from '@angular/common';
-import { AgentService } from '../../core/services/agent.service';
 import { TelemetryService, MetricReportDetail } from '../../core/services/telemetry.service';
 import { AgentDetails } from '../../core/models/api.models';
 import { Subject, switchMap, timer, takeUntil, catchError, of } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { AgentActions } from '../../store/agents/agents.actions';
+import { selectAllAgents } from '../../store/agents/agents.selectors';
 
 @Component({
   selector: 'app-telemetry-page',
@@ -24,19 +26,11 @@ export class TelemetryPageComponent implements OnInit, OnDestroy {
   private readonly agentSelected$ = new Subject<string>();
 
   constructor(
-    private readonly agentService: AgentService,
+    private readonly store: Store,
     private readonly telemetryService: TelemetryService,
   ) {}
 
   ngOnInit() {
-    this.agentService.getAll().subscribe((agents) => {
-      this.agents = agents;
-      this.loading = false;
-      if (agents.length > 0) {
-        this.selectAgent(agents[0]);
-      }
-    });
-
     this.agentSelected$
       .pipe(
         switchMap((agentId) =>
@@ -56,6 +50,23 @@ export class TelemetryPageComponent implements OnInit, OnDestroy {
         }
         this.telemetryLoading = false;
       });
+
+    this.store.dispatch(AgentActions.loadAgents());
+    this.store.dispatch(AgentActions.loadStats());
+
+    this.store.select(selectAllAgents).pipe(takeUntil(this.destroy$)).subscribe((agents) => {
+      this.agents = agents;
+      this.loading = false;
+
+      if (agents.length === 0) {
+        this.selectedAgent = null;
+        return;
+      }
+
+      if (!this.selectedAgent || !agents.some((agent) => agent.agentId === this.selectedAgent?.agentId)) {
+        this.selectAgent(agents[0]);
+      }
+    });
   }
 
   ngOnDestroy() {
