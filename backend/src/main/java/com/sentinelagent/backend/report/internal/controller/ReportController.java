@@ -44,8 +44,8 @@ public class ReportController {
 
     @GetMapping
     public ResponseEntity<List<ReportDocument>> getAllReports(
-            @RequestParam(required = false) String agentId,
-            @RequestParam(required = false) String reportType) {
+            @RequestParam(name = "agentId", required = false) String agentId,
+            @RequestParam(name = "reportType", required = false) String reportType) {
 
         if (agentId != null && !agentId.isBlank()) {
             return ResponseEntity.ok(reportRepository.findByAgentIdOrderByGeneratedAtDesc(agentId));
@@ -57,7 +57,7 @@ public class ReportController {
     }
 
     @GetMapping("/download/{reportId}")
-    public ResponseEntity<byte[]> downloadReport(@PathVariable String reportId) {
+    public ResponseEntity<byte[]> downloadReport(@PathVariable("reportId") String reportId) {
         return reportRepository.findById(reportId)
                 .map(report -> {
                     String body = buildDownloadContent(report);
