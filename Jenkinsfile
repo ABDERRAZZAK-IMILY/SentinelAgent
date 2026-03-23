@@ -31,10 +31,11 @@ pipeline {
           # Remove stale build outputs that may survive between Jenkins runs.
           rm -rf "$WORKSPACE/backend/target" "$WORKSPACE/backend/target/classes"
 
-          # Defensive cleanup for legacy controller path that conflicts by bean name.
-          if [ -f "$WORKSPACE/backend/src/main/java/com/sentinelagent/backend/auth/UserController.java" ]; then
-            echo "Removing legacy controller: backend/auth/UserController.java"
-            rm -f "$WORKSPACE/backend/src/main/java/com/sentinelagent/backend/auth/UserController.java"
+          # Defensive cleanup for legacy flat auth package classes that conflict
+          # with the new auth/internal package classes.
+          LEGACY_AUTH_DIR="$WORKSPACE/backend/src/main/java/com/sentinelagent/backend/auth"
+          if [ -d "$LEGACY_AUTH_DIR" ]; then
+            find "$LEGACY_AUTH_DIR" -maxdepth 1 -type f -name '*.java' -print -delete || true
           fi
 
           docker build --pull \
