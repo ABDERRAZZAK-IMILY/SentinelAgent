@@ -31,6 +31,12 @@ pipeline {
           # Remove stale build outputs that may survive between Jenkins runs.
           rm -rf "$WORKSPACE/backend/target" "$WORKSPACE/backend/target/classes"
 
+          # Defensive cleanup for legacy controller path that conflicts by bean name.
+          if [ -f "$WORKSPACE/backend/src/main/java/com/sentinelagent/backend/auth/UserController.java" ]; then
+            echo "Removing legacy controller: backend/auth/UserController.java"
+            rm -f "$WORKSPACE/backend/src/main/java/com/sentinelagent/backend/auth/UserController.java"
+          fi
+
           docker build --pull \
             -t sentinel-backend-ci:${BUILD_NUMBER} \
             -f - "$WORKSPACE/backend" <<'EOF'
