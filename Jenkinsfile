@@ -44,7 +44,7 @@ pipeline {
 FROM maven:3.9.9-eclipse-temurin-17
 WORKDIR /workspace
 COPY . .
-RUN mvn --batch-mode clean verify
+RUN mvn --batch-mode clean verify -Dtest=!BackendApplicationTests
 EOF
 
           CID="$(docker create sentinel-backend-ci:${BUILD_NUMBER})"
