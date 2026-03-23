@@ -27,14 +27,19 @@ pipeline {
             exit 1
           fi
 
-          docker run --rm \
-            -v "$WORKSPACE/backend":/workspace \
-            -w /workspace \
-            maven:3.9.9-eclipse-temurin-17 \
-            sh -lc '
-              set -e
-              mvn --batch-mode clean verify
-            '
+          docker build --pull \
+            -t sentinel-backend-ci:${BUILD_NUMBER} \
+            -f - "$WORKSPACE/backend" <<'EOF'
+FROM maven:3.9.9-eclipse-temurin-17
+WORKDIR /workspace
+COPY . .
+RUN mvn --batch-mode clean verify
+EOF
+
+          CID="$(docker create sentinel-backend-ci:${BUILD_NUMBER})"
+          rm -rf "$WORKSPACE/backend/target"
+          docker cp "$CID:/workspace/target" "$WORKSPACE/backend/"
+          docker rm -f "$CID" >/dev/null
         '''
       }
     }
@@ -49,15 +54,21 @@ pipeline {
             exit 1
           fi
 
-          docker run --rm \
-            -v "$WORKSPACE/frontend":/workspace \
-            -w /workspace \
-            node:20-bookworm \
-            sh -lc '
-              set -e
-              npm ci
-              npm run build
-            '
+          docker build --pull \
+            -t sentinel-frontend-ci:${BUILD_NUMBER} \
+            -f - "$WORKSPACE/frontend" <<'EOF'
+FROM node:20-bookworm
+WORKDIR /workspace
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+EOF
+
+          CID="$(docker create sentinel-frontend-ci:${BUILD_NUMBER})"
+          rm -rf "$WORKSPACE/frontend/dist"
+          docker cp "$CID:/workspace/dist" "$WORKSPACE/frontend/"
+          docker rm -f "$CID" >/dev/null
         '''
       }
     }
@@ -72,16 +83,21 @@ pipeline {
             exit 1
           fi
 
-          docker run --rm \
-            -v "$WORKSPACE/agentTopic":/workspace \
-            -w /workspace \
-            golang:1.25-bookworm \
-            sh -lc '
-              set -e
-              go mod download
-              mkdir -p bin
-              go build -o bin/sentinel-agent ./agent.go
-            '
+          docker build --pull \
+            -t sentinel-agent-ci:${BUILD_NUMBER} \
+            -f - "$WORKSPACE/agentTopic" <<'EOF'
+FROM golang:1.25-bookworm
+WORKDIR /workspace
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN mkdir -p bin && go build -o bin/sentinel-agent ./agent.go
+EOF
+
+          CID="$(docker create sentinel-agent-ci:${BUILD_NUMBER})"
+          rm -rf "$WORKSPACE/agentTopic/bin"
+          docker cp "$CID:/workspace/bin" "$WORKSPACE/agentTopic/"
+          docker rm -f "$CID" >/dev/null
         '''
       }
     }
