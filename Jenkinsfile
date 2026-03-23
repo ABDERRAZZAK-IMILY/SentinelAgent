@@ -13,6 +13,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
+        deleteDir()
         checkout scm
       }
     }
@@ -26,6 +27,9 @@ pipeline {
             find "$WORKSPACE" -maxdepth 5 -type f -name pom.xml -print || true
             exit 1
           fi
+
+          # Remove stale build outputs that may survive between Jenkins runs.
+          rm -rf "$WORKSPACE/backend/target" "$WORKSPACE/backend/target/classes"
 
           docker build --pull \
             -t sentinel-backend-ci:${BUILD_NUMBER} \
