@@ -6,10 +6,6 @@ pipeline {
     disableConcurrentBuilds()
   }
 
-  environment {
-    CI = 'true'
-  }
-
   stages {
     stage('Checkout') {
       steps {
@@ -22,17 +18,7 @@ pipeline {
       steps {
         sh '''
           set -e
-          if [ ! -f "$WORKSPACE/backend/pom.xml" ]; then
-            echo "Missing backend/pom.xml in workspace: $WORKSPACE"
-            find "$WORKSPACE" -maxdepth 5 -type f -name pom.xml -print || true
-            exit 1
-          fi
-
-          # Remove stale build outputs that may survive between Jenkins runs.
           rm -rf "$WORKSPACE/backend/target" "$WORKSPACE/backend/target/classes"
-
-          # Defensive cleanup for legacy flat auth package classes that conflict
-          # with the new auth/internal package classes.
           LEGACY_AUTH_DIR="$WORKSPACE/backend/src/main/java/com/sentinelagent/backend/auth"
           if [ -d "$LEGACY_AUTH_DIR" ]; then
             find "$LEGACY_AUTH_DIR" -maxdepth 1 -type f -name '*.java' -print -delete || true
@@ -59,12 +45,6 @@ EOF
       steps {
         sh '''
           set -e
-          if [ ! -f "$WORKSPACE/frontend/package.json" ]; then
-            echo "Missing frontend/package.json in workspace: $WORKSPACE"
-            find "$WORKSPACE" -maxdepth 5 -type f -name package.json -print || true
-            exit 1
-          fi
-
           docker build --pull \
             -t sentinel-frontend-ci:${BUILD_NUMBER} \
             -f - "$WORKSPACE/frontend" <<'EOF'
@@ -88,12 +68,6 @@ EOF
       steps {
         sh '''
           set -e
-          if [ ! -f "$WORKSPACE/agentTopic/go.mod" ]; then
-            echo "Missing agentTopic/go.mod in workspace: $WORKSPACE"
-            find "$WORKSPACE" -maxdepth 5 -type f -name go.mod -print || true
-            exit 1
-          fi
-
           docker build --pull \
             -t sentinel-agent-ci:${BUILD_NUMBER} \
             -f - "$WORKSPACE/agentTopic" <<'EOF'
