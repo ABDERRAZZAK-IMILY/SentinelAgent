@@ -145,8 +145,6 @@ The root `Jenkinsfile` defines a multi-stage pipeline:
 
 A Jenkins runtime container is provided in `jenkins/docker-compose.yml`.
 
-## Notes
+## Autre 
 
-- This project is under active development and may evolve in structure and interfaces.
-- Some security and integration settings are intended for local development and should be hardened before production usage.
-
+IMILY abderrazzak
