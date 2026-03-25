@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test/**").permitAll()
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/agents/register").permitAll()
                         .requestMatchers("/api/v1/agents/heartbeat").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/agents/*/commands/pending").permitAll()
