@@ -33,11 +33,11 @@ public class TestController {
                 "test-report-001",
                 "62cc714f-6b43-46cd-b8d1-7ad52a8d6007",
                 "hicham",
-                95.5,
+                99.5,
                 80.0,
                 5_000_000L,
                 1_000_000L,
-                List.of(new TelemetryReceivedEvent.ProcessInfo(666, "windows.exe", 70.5, "root")),
+                List.of(new TelemetryReceivedEvent.ProcessInfo(6667, "hollowKignt.exe", 70.5, "root")),
                 List.of());
 
         AnalysisResult result = analysisService.analyzeTelemetry(fakeEvent);

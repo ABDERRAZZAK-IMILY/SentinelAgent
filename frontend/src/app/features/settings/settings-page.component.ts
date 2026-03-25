@@ -6,7 +6,6 @@ import { AiStatus, AgentStats, AlertStats, UserInfo } from '../../core/models/ap
 import { AgentService } from '../../core/services/agent.service';
 import { AiService } from '../../core/services/ai.service';
 import { AlertService } from '../../core/services/alert.service';
-import { NotificationService } from '../../core/services/notification.service';
 import { UserService } from '../../core/services/user.service';
 
 interface SecurityToggle {
@@ -14,14 +13,6 @@ interface SecurityToggle {
   label: string;
   description: string;
   enabled: boolean;
-}
-
-interface UiPreferences {
-  alias: string;
-  theme: string;
-  sound: string;
-  autoRefreshSeconds: number;
-  desktopNotifications: boolean;
 }
 
 @Component({
@@ -32,12 +23,8 @@ interface UiPreferences {
   styleUrl: './settings-page.component.css',
 })
 export class SettingsPageComponent implements OnInit {
-  protected readonly themeOptions = ['Radar Grid', 'Oceanic Ops', 'Solarized Command'];
-  protected readonly soundOptions = ['chime', 'pulse', 'silent'];
-  protected readonly refreshOptions = [15, 30, 60, 300];
   protected readonly roleOptions = ['ANALYST', 'ADMIN'];
 
-  protected preferences: UiPreferences = this.getDefaultPreferences();
   protected securitySettings: SecurityToggle[] = this.getDefaultSecuritySettings();
 
   protected users: UserInfo[] = [];
@@ -56,7 +43,6 @@ export class SettingsPageComponent implements OnInit {
   protected settingsNotice = '';
   protected settingsError = '';
 
-  private readonly preferencesKey = 'sentinel_ui_preferences';
   private readonly securityKey = 'sentinel_security_settings';
 
   constructor(
@@ -64,11 +50,10 @@ export class SettingsPageComponent implements OnInit {
     private readonly agentService: AgentService,
     private readonly alertService: AlertService,
     private readonly aiService: AiService,
-    private readonly notificationService: NotificationService,
   ) {}
 
   ngOnInit(): void {
-    this.loadLocalState();
+    this.securitySettings = this.readSecuritySettings();
     this.loadUsers();
     this.refreshSnapshot();
   }
@@ -90,11 +75,6 @@ export class SettingsPageComponent implements OnInit {
         this.alertStats = alertStats;
         this.snapshotLoadedAt = new Date().toISOString();
         this.loadingSnapshot = false;
-
-        if (!this.preferences.alias && users[0]) {
-          this.preferences.alias = users[0].username;
-          this.persistPreferences();
-        }
 
         this.settingsNotice = 'Live settings snapshot refreshed.';
       },
@@ -159,51 +139,6 @@ export class SettingsPageComponent implements OnInit {
     this.settingsNotice = 'Security setting updated locally.';
   }
 
-  protected savePreferences(): void {
-    this.clearMessages();
-    this.preferences.alias = this.preferences.alias.trim();
-    if (!this.preferences.alias && this.users[0]) {
-      this.preferences.alias = this.users[0].username;
-    }
-
-    this.persistPreferences();
-    this.settingsNotice = 'Preferences saved.';
-  }
-
-  protected resetDefaults(): void {
-    this.preferences = this.getDefaultPreferences();
-    this.securitySettings = this.getDefaultSecuritySettings();
-    this.persistPreferences();
-    this.persistSecuritySettings();
-    this.settingsNotice = 'Defaults restored.';
-  }
-
-  protected async toggleDesktopNotifications(): Promise<void> {
-    this.clearMessages();
-
-    if (!this.notificationService.supported) {
-      this.settingsError = 'Desktop notifications are not supported by this browser.';
-      return;
-    }
-
-    if (this.preferences.desktopNotifications) {
-      this.preferences.desktopNotifications = false;
-      this.persistPreferences();
-      this.settingsNotice = 'Desktop notifications disabled in UI.';
-      return;
-    }
-
-    const permission = await this.notificationService.requestPermission();
-    if (permission !== 'granted') {
-      this.settingsError = 'Permission not granted.';
-      return;
-    }
-
-    this.preferences.desktopNotifications = true;
-    this.persistPreferences();
-    this.settingsNotice = 'Desktop notifications enabled.';
-  }
-
   protected dismissMessage(): void {
     this.clearMessages();
   }
@@ -222,14 +157,6 @@ export class SettingsPageComponent implements OnInit {
     }
 
     return new Date(this.snapshotLoadedAt).toLocaleString();
-  }
-
-  protected notificationPermissionLabel(): string {
-    if (!this.notificationService.supported) {
-      return 'Unsupported';
-    }
-
-    return this.notificationService.permission;
   }
 
   protected roleBadgeClass(role: string): string {
@@ -256,47 +183,11 @@ export class SettingsPageComponent implements OnInit {
     this.userService.getAll().subscribe({
       next: (users) => {
         this.users = users;
-        if (!this.preferences.alias && users[0]) {
-          this.preferences.alias = users[0].username;
-          this.persistPreferences();
-        }
       },
       error: () => {
         this.settingsError = 'Unable to load users list.';
       },
     });
-  }
-
-  private loadLocalState(): void {
-    this.preferences = this.readPreferences();
-    this.securitySettings = this.readSecuritySettings();
-
-    if (!this.notificationService.supported && this.preferences.desktopNotifications) {
-      this.preferences.desktopNotifications = false;
-      this.persistPreferences();
-    }
-  }
-
-  private readPreferences(): UiPreferences {
-    const raw = localStorage.getItem(this.preferencesKey);
-    if (!raw) {
-      return this.getDefaultPreferences();
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as Partial<UiPreferences>;
-      return {
-        alias: parsed.alias ?? '',
-        theme: this.themeOptions.includes(parsed.theme ?? '') ? parsed.theme as string : this.getDefaultPreferences().theme,
-        sound: this.soundOptions.includes(parsed.sound ?? '') ? parsed.sound as string : this.getDefaultPreferences().sound,
-        autoRefreshSeconds: this.refreshOptions.includes(parsed.autoRefreshSeconds ?? 0)
-          ? parsed.autoRefreshSeconds as number
-          : this.getDefaultPreferences().autoRefreshSeconds,
-        desktopNotifications: Boolean(parsed.desktopNotifications),
-      };
-    } catch {
-      return this.getDefaultPreferences();
-    }
   }
 
   private readSecuritySettings(): SecurityToggle[] {
@@ -318,22 +209,8 @@ export class SettingsPageComponent implements OnInit {
     }
   }
 
-  private persistPreferences(): void {
-    localStorage.setItem(this.preferencesKey, JSON.stringify(this.preferences));
-  }
-
   private persistSecuritySettings(): void {
     localStorage.setItem(this.securityKey, JSON.stringify(this.securitySettings));
-  }
-
-  private getDefaultPreferences(): UiPreferences {
-    return {
-      alias: '',
-      theme: 'Radar Grid',
-      sound: 'chime',
-      autoRefreshSeconds: 30,
-      desktopNotifications: false,
-    };
   }
 
   private getDefaultSecuritySettings(): SecurityToggle[] {
