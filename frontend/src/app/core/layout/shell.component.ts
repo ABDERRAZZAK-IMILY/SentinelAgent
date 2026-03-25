@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { AsyncPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NavItem } from '../models/navigation.model';
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
 import { Store } from '@ngrx/store';
 import { AlertActions } from '../../store/alerts/alerts.actions';
 import {
@@ -20,8 +21,9 @@ import {
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit {
   private readonly store = inject(Store);
+  private readonly notificationService = inject(NotificationService);
 
   protected profileOpen = false;
   protected notificationsOpen = false;
@@ -42,6 +44,12 @@ export class ShellComponent {
   ];
 
   constructor(private readonly authService: AuthService) {}
+
+  ngOnInit(): void {
+    this.notificationService.requestPermission().then((permission) => {
+      console.log('Notification permission status:', permission);
+    });
+  }
 
   protected toggleNotifications(): void {
     this.notificationsOpen = !this.notificationsOpen;
